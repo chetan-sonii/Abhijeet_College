@@ -1,0 +1,20 @@
+/* static/css/auth/register.css */
+
+.auth-section { min-height: 78vh; display: flex; align-items: center; }
+.auth-card { border-radius: 12px; overflow: hidden; }
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 36px;
+  background: transparent;
+  border: 0;
+  font-size: .85rem;
+  color: #6c757d;
+  cursor: pointer;
+  padding: .25rem .5rem;
+}
+#pwd-strength { margin-top: 0.25rem; }
+#pwd-strength-value { font-weight: 700; color: #0d6efd; }
+@media (max-width: 576px) {
+  .auth-card { margin: 0 0.6rem; }
+}

@@ -1,0 +1,13 @@
+aside .nav-link {
+  border-radius: 6px;
+  color: #333;
+}
+
+aside .nav-link.active {
+  background-color: #0d6efd;
+  color: #fff;
+}
+
+aside .nav-link:hover {
+  background-color: rgba(13,110,253,.1);
+}

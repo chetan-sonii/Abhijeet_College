@@ -1,0 +1,65 @@
+{# templates/auth/login.html #}
+{% extends "base.html" %}
+
+{% block title %}Login — {{ config.SITE_NAME if config is defined else 'College' }}{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth/login.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="auth-section py-5">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-sm-10 col-md-8 col-lg-5">
+        <div class="card auth-card shadow-sm">
+          <div class="card-body p-4">
+            <h3 class="mb-3 text-center">Sign in</h3>
+
+            {# show non-field errors as alert (server side) #}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% for category, message in messages %}
+                <div class="alert alert-{{ category }} small" role="alert">{{ message }}</div>
+              {% endfor %}
+            {% endwith %}
+
+            <form method="post" action="{{ url_for('auth.login') }}" novalidate id="login-form">
+              {{ form.hidden_tag() }}
+
+              <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                {{ form.email(class="form-control", id="email", placeholder="you@example.com", autofocus=True) }}
+                {% if form.email.errors %}
+                  <div class="form-text text-danger">{{ form.email.errors[0] }}</div>
+                {% endif %}
+              </div>
+
+              <div class="mb-3 position-relative">
+                <label for="password" class="form-label">Password</label>
+                {{ form.password(class="form-control", id="password", placeholder="Your password") }}
+                <button type="button" class="password-toggle" id="login-password-toggle" aria-label="Show password" title="Show password">Show</button>
+                {% if form.password.errors %}
+                  <div class="form-text text-danger">{{ form.password.errors[0] }}</div>
+                {% endif %}
+              </div>
+
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <small><a href="{{ url_for('auth.register') }}">Create account</a></small>
+                <button type="submit" class="btn btn-primary" id="login-submit">{{ form.submit.label.text }}</button>
+              </div>
+            </form>
+
+            <hr />
+
+            <p class="small text-muted mb-0 text-center">This is a college project demo — passwords are stored hashed, but don't use production credentials here.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block page_js %}
+<script src="{{ url_for('static', filename='js/auth/login.js') }}"></script>
+{% endblock %}

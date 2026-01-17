@@ -1,0 +1,13 @@
+flask
+flask-sqlalchemy
+flask-migrate
+flask-login
+python-dotenv
+pymysql
+SQLAlchemy
+Werkzeug
+flask-wtf
+WTForms
+email-validator
+dotenv
+cryptography

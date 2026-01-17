@@ -1,0 +1,360 @@
+{# templates/public/about.html #}
+{% extends "base.html" %}
+
+{% block title %}About Us — {{ config.SITE_NAME if config is defined else 'College' }}{% endblock %}
+
+{% block page_css %}
+<style>
+    /* Hero Section */
+    .about-hero-modern {
+        background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url("{{ url_for('static', filename='images/hero-1.jpg') }}");
+        background-size: cover;
+        background-position: center;
+        color: white;
+        padding: 100px 0;
+        margin-bottom: 3rem;
+    }
+
+    /* Cards Hover Effect */
+    .hover-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+    .hover-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+
+    /* Vision/Mission Borders */
+    .card-vision { border-top: 4px solid #4e73df; }
+    .card-mission { border-top: 4px solid #1cc88a; }
+
+    /* Timeline CSS */
+    .timeline {
+        border-left: 3px solid #e3e6f0;
+        margin-left: 20px;
+        padding-left: 30px;
+        position: relative;
+    }
+    .timeline-item {
+        position: relative;
+        margin-bottom: 2.5rem;
+    }
+    .timeline-dot {
+        width: 16px;
+        height: 16px;
+        background: #4e73df;
+        border-radius: 50%;
+        position: absolute;
+        left: -39px;
+        top: 5px;
+        border: 3px solid #fff;
+        box-shadow: 0 0 0 2px #4e73df;
+    }
+
+    /* Stat Box */
+    .stat-box {
+        background: #fff;
+        padding: 2rem;
+        border-radius: 10px;
+        text-align: center;
+        border-bottom: 4px solid #36b9cc;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+    .stat-icon {
+        font-size: 2.5rem;
+        color: #dddfeb;
+        margin-bottom: 1rem;
+    }
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #5a5c69;
+    }
+    <style>
+    .vision-card:hover, .mission-card:hover {
+        transform: translateY(-10px) !important;
+        box-shadow: 0 1rem 3rem rgba(0,0,0,.15) !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="about-hero-modern text-center">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-8">
+        <span class="badge bg-primary px-3 py-2 rounded-pill mb-3 text-uppercase tracking-wide">Since 1995</span>
+        <h1 class="display-4 fw-bold mb-3">Empowering Future Leaders</h1>
+        <p class="lead text-light opacity-75">
+            We are dedicated to academic excellence, fostering innovation, and building a community of lifelong learners.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="py-5">
+    <div class="container">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-5">
+                <div class="position-relative">
+                    <img src="{{ url_for('static', filename='images/principal.jpg') }}"
+                         alt="Principal" class="img-fluid rounded-3 shadow">
+                    <div class="bg-primary text-white p-3 rounded position-absolute bottom-0 start-0 m-3 shadow">
+                        <h6 class="mb-0 fw-bold">Dr. A. Sharma</h6>
+                        <small>Principal</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-7">
+                <h6 class="text-primary fw-bold text-uppercase">Welcome Note</h6>
+                <h2 class="fw-bold mb-4">A Message from the Principal</h2>
+                <p class="text-muted">
+                    "Welcome to our college. For over three decades, we have been at the forefront of education,
+                    shaping young minds into responsible citizens and industry leaders. Our campus is not just a
+                    place of learning, but a hub of creativity and innovation."
+                </p>
+                <p class="text-muted mb-4">
+                    "We believe in holistic development, ensuring that our students excel not just academically,
+                    but also in extracurriculars, leadership, and ethics."
+                </p>
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Signature_sample.svg/1200px-Signature_sample.svg.png"
+                     alt="Signature" style="height: 50px; opacity: 0.6;">
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5 position-relative bg-light overflow-hidden">
+  <div class="position-absolute top-0 start-0 w-100 h-100"
+       style="background-image: radial-gradient(#cbd5e0 1.5px, transparent 1.5px); background-size: 24px 24px; opacity: 0.4;">
+  </div>
+
+  <div class="container position-relative z-1">
+    <div class="row g-4 align-items-stretch">
+
+      <div class="col-lg-6">
+        <div class="card h-100 border-0 shadow-lg overflow-hidden vision-card" style="border-radius: 1rem; transition: transform 0.3s ease;">
+          <div class="card-body p-5 position-relative bg-white">
+
+            <i class="bi bi-eye-fill position-absolute text-primary"
+               style="bottom: -30px; right: -30px; font-size: 12rem; opacity: 0.05; transform: rotate(-10deg);"></i>
+
+            <div class="d-flex align-items-center mb-4">
+                <div class="d-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary rounded-3"
+                     style="width: 60px; height: 60px;">
+                    <i class="bi bi-binoculars-fill fs-3"></i>
+                </div>
+                <div class="ms-3">
+                    <h6 class="text-primary fw-bold text-uppercase mb-1 small tracking-wide">Future Outlook</h6>
+                    <h3 class="fw-bold mb-0">Our Vision</h3>
+                </div>
+            </div>
+
+            <p class="lead text-secondary mb-4" style="line-height: 1.8;">
+              {{ vision or 'To be a global leader in education, recognized for excellence in teaching, research, and innovation, fostering a community of lifelong learners who drive positive change.' }}
+            </p>
+
+            <div class="d-flex flex-wrap gap-3 mt-auto">
+                <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill">
+                    <i class="bi bi-check-circle-fill text-primary me-1"></i> Global Excellence
+                </span>
+                <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill">
+                    <i class="bi bi-check-circle-fill text-primary me-1"></i> Innovation
+                </span>
+                <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill">
+                    <i class="bi bi-check-circle-fill text-primary me-1"></i> Leadership
+                </span>
+            </div>
+          </div>
+          <div class="bg-primary w-100" style="height: 6px;"></div>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="card h-100 border-0 shadow-lg overflow-hidden mission-card" style="border-radius: 1rem; transition: transform 0.3s ease;">
+          <div class="card-body p-5 position-relative bg-white">
+
+            <i class="bi bi-rocket-takeoff-fill position-absolute text-success"
+               style="bottom: -30px; right: -20px; font-size: 12rem; opacity: 0.05; transform: rotate(-10deg);"></i>
+
+            <div class="d-flex align-items-center mb-4">
+                <div class="d-flex align-items-center justify-content-center bg-success bg-opacity-10 text-success rounded-3"
+                     style="width: 60px; height: 60px;">
+                    <i class="bi bi-bullseye fs-3"></i>
+                </div>
+                <div class="ms-3">
+                    <h6 class="text-success fw-bold text-uppercase mb-1 small tracking-wide">Our Purpose</h6>
+                    <h3 class="fw-bold mb-0">Our Mission</h3>
+                </div>
+            </div>
+
+            <p class="lead text-secondary mb-4" style="line-height: 1.8;">
+              {{ mission or 'To provide high-quality education that empowers students with knowledge, skills, and values to succeed in a dynamic world, while instilling a strong sense of social responsibility.' }}
+            </p>
+
+            <div class="d-flex flex-wrap gap-3 mt-auto">
+                <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill">
+                    <i class="bi bi-check-circle-fill text-success me-1"></i> Quality Education
+                </span>
+                <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill">
+                    <i class="bi bi-check-circle-fill text-success me-1"></i> Skill Building
+                </span>
+                <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill">
+                    <i class="bi bi-check-circle-fill text-success me-1"></i> Ethics
+                </span>
+            </div>
+          </div>
+          <div class="bg-success w-100" style="height: 6px;"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+
+<section class="py-5">
+  <div class="container">
+    <div class="text-center mb-5">
+        <h6 class="text-primary fw-bold text-uppercase">Our Culture</h6>
+        <h2 class="fw-bold">Core Values</h2>
+    </div>
+    <div class="row g-4">
+      {% for v in core_values %}
+      <div class="col-md-4 col-sm-6">
+        <div class="card h-100 text-center hover-card p-4 border-0 bg-white">
+          <div class="card-body">
+            <div class="mb-3 text-primary">
+                {% if loop.index % 3 == 0 %} <i class="bi bi-people-fill fs-1"></i>
+                {% elif loop.index % 3 == 1 %} <i class="bi bi-lightbulb-fill fs-1"></i>
+                {% else %} <i class="bi bi-shield-check fs-1"></i>
+                {% endif %}
+            </div>
+            <h5 class="fw-bold">{{ v }}</h5>
+            <p class="small text-muted mb-0">We believe in {{ v|lower }} as a fundamental pillar of our educational philosophy.</p>
+          </div>
+        </div>
+      </div>
+      {% else %}
+        <div class="col-md-4"><div class="card p-3"><h5 class="text-center">Integrity</h5></div></div>
+        <div class="col-md-4"><div class="card p-3"><h5 class="text-center">Excellence</h5></div></div>
+        <div class="col-md-4"><div class="card p-3"><h5 class="text-center">Innovation</h5></div></div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="py-5 bg-dark text-white">
+  <div class="container">
+    <div class="row g-4 justify-content-center">
+      <div class="col-6 col-md-3">
+        <div class="text-center">
+          <h2 class="display-4 fw-bold mb-0">{{ facts.courses or 25 }}+</h2>
+          <p class="text-white-50">Programs Offered</p>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="text-center">
+          <h2 class="display-4 fw-bold mb-0">{{ facts.students or 1200 }}+</h2>
+          <p class="text-white-50">Happy Students</p>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="text-center">
+          <h2 class="display-4 fw-bold mb-0">{{ facts.faculty or 50 }}+</h2>
+          <p class="text-white-50">Expert Faculty</p>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="text-center">
+          <h2 class="display-4 fw-bold mb-0">100%</h2>
+          <p class="text-white-50">Placement Support</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="py-5 bg-white">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-6 mb-4">
+                <h6 class="text-primary fw-bold text-uppercase">Our Journey</h6>
+                <h2 class="fw-bold mb-4">History & Milestones</h2>
+                <p class="text-muted">From humble beginnings to a premier institution, here is how we grew over the years.</p>
+                <img src="{{ url_for('static', filename='index/images/campus-old.jpg') if filename else 'https://i.pinimg.com/1200x/66/61/fd/6661fd476c01b55aba1716ae384838ff.jpg' }}" class="img-fluid rounded shadow-sm mt-3">
+            </div>
+            <div class="col-lg-6">
+                <div class="timeline mt-3">
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <h5 class="fw-bold">2025</h5>
+                        <p class="text-muted">Awarded "Best College of the Year" by State Education Board.</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <h5 class="fw-bold">2018</h5>
+                        <p class="text-muted">Expanded campus with new Engineering and Research blocks.</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <h5 class="fw-bold">2010</h5>
+                        <p class="text-muted">Accredited by National Board of Accreditation (NBA).</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <h5 class="fw-bold">1995</h5>
+                        <p class="text-muted">Founded with a vision to provide quality education to all.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5 bg-light">
+  <div class="container">
+    <div class="text-center mb-5">
+        <h6 class="text-primary fw-bold text-uppercase">Our Guides</h6>
+        <h2 class="fw-bold">Leadership Team</h2>
+    </div>
+    <div class="row g-4 justify-content-center">
+      {% for p in leadership %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100 border-0 hover-card text-center overflow-hidden">
+          <div class="py-4 bg-white">
+              <img src="{{ p.image or 'https://ui-avatars.com/api/?name=' + p.name + '&background=random' }}"
+                   class="rounded-circle shadow-sm"
+                   alt="{{ p.name }}"
+                   style="width:120px;height:120px;object-fit:cover; border: 4px solid #f8f9fc;">
+          </div>
+          <div class="card-body bg-white pt-0">
+            <h5 class="fw-bold mb-1">{{ p.name }}</h5>
+            <span class="badge bg-primary bg-opacity-10 text-primary mb-3">{{ p.title }}</span>
+            <p class="small text-muted px-2">{{ p.bio }}</p>
+
+            <div class="d-flex justify-content-center gap-2 mt-3">
+                <a href="#" class="btn btn-sm btn-outline-secondary rounded-circle"><i class="bi bi-linkedin"></i></a>
+                <a href="#" class="btn btn-sm btn-outline-secondary rounded-circle"><i class="bi bi-twitter"></i></a>
+                <a href="#" class="btn btn-sm btn-outline-secondary rounded-circle"><i class="bi bi-envelope"></i></a>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="py-5 bg-primary text-white text-center">
+    <div class="container">
+        <h2 class="fw-bold">Ready to start your journey?</h2>
+        <p class="lead mb-4 text-white-50">Join us and be a part of our growing community.</p>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg rounded-pill px-5 fw-bold text-primary">Apply Now</a>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,4 @@
+/* static/css/users/dashboard.css */
+.card-stat { border-radius: 8px; }
+.card-stat .stat-value { font-size: 1.6rem; font-weight: 600; margin-top: .4rem; }
+#upcoming-exams .exam-row { padding: .5rem 0; border-bottom: 1px solid rgba(0,0,0,.05); }

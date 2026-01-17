@@ -1,0 +1,19 @@
+/* static/css/public/contact.css */
+
+.contact-hero h1 { font-size: 2rem; font-weight: 700; }
+.contact-info a { color: #0d6efd; text-decoration: none; }
+.card form .form-control { border-radius: 8px; }
+
+/* Contact page map */
+.contact-map-wrapper {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 0 14px 36px rgba(0,0,0,0.06);
+}
+
+.contact-map-wrapper iframe {
+  width: 100%;
+  height: 380px;
+  border: 0;
+}

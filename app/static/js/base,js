@@ -1,0 +1,48 @@
+// base.js - site-wide JS helpers (toasts, small AJAX helpers)
+
+// show bootstrap toasts for flashed messages rendered in DOM
+document.addEventListener("DOMContentLoaded", function() {
+    var toastArea = document.getElementById("toast-area");
+    const toastElList = document.querySelectorAll(".toast");
+    toastElList.forEach(function(toastEl) {
+        const toast = new bootstrap.Toast(toastEl);
+        toast.show();
+    });
+    if (!toastArea) return;
+
+    // find toast elements already present and show them using Bootstrap (v3 doesn't include Toasts;
+    // if you're using Bootstrap v4/v5, adapt to Toast component. Here we'll implement a simple fallback.)
+    // We'll show simple dismissible alerts as fallback for Bootstrap v3.
+    var toasts = toastArea.querySelectorAll(".toast");
+    toasts.forEach(function(t) {
+        // If bootstrap toast plugin exists use it; otherwise fallback to showing alert and auto-dismiss
+        if (typeof $(t).toast === "function") {
+            $(t).toast("show");
+        } else {
+            t.classList.add("in");
+            setTimeout(function() {
+                t.classList.remove("in");
+                t.style.display = "none";
+            }, 6000);
+        }
+    });
+});
+
+// small helper to POST via AJAX with CSRF for forms (Flask-WTF)
+function ajaxPost(url, data, csrfToken, success, error) {
+    return $.ajax({
+        url: url,
+        method: "POST",
+        data: data,
+        headers: {
+            "X-CSRFToken": csrfToken
+        },
+        success: success,
+        error: error || function(xhr) {
+            console.error(xhr);
+        }
+    });
+} // static/js/base.js
+document.addEventListener("DOMContentLoaded", function() {
+
+});

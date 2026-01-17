@@ -1,0 +1,9 @@
+/* static/css/public/about.css */
+
+.about-hero { padding-top: 3.5rem; padding-bottom: 3.5rem; }
+.vision-mission h3, .core-values h3, .facts h3, .leadership h3 { font-weight: 700; }
+.value-card { border-radius: 12px; border: 1px solid rgba(0,0,0,0.04); }
+.fact-card { background: #fff; border-radius: 10px; box-shadow: 0 8px 20px rgba(15,23,42,0.04); }
+.fact-number { font-weight: 800; font-size: 1.6rem; color: #0d6efd; }
+.fact-label { color: #6b7280; font-size: .9rem; }
+.leadership img { border: 6px solid #fff; box-shadow: 0 6px 20px rgba(0,0,0,0.06); }

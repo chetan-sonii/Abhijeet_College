@@ -1,0 +1,57 @@
+{# templates/admin/base.html #}
+{% extends "base.html" %}
+
+{# page-specific CSS (optional) #}
+{% block page_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="admin-wrap">
+  <div class="container-fluid">
+    <div class="row">
+      <!-- Sidebar -->
+      <aside class="col-lg-2 d-none d-lg-block admin-sidebar vh-100 pt-4">
+        <div class="px-3">
+          <a class="d-block mb-4" href="{{ url_for('admin.dashboard') }}">
+            <strong>{{ config.SITE_NAME if config is defined else 'College Admin' }}</strong>
+          </a>
+
+          <nav class="nav flex-column">
+            <a class="nav-link {% if request.path == url_for('admin.dashboard') %}active{% endif %}" href="{{ url_for('admin.dashboard') }}">Dashboard</a>
+
+            <a class="nav-link {% if request.path.startswith(url_for('admin.apps_page')) %}active{% endif %}" href="{{ url_for('admin.apps_page') }}">
+              Contact & Enroll Applications
+              <span class="badge bg-info text-dark ms-1 small" id="badge-pending-apps" style="display:inline-block;">
+                {{ stats.pending_users if stats is defined and stats.pending_users is not none else '' }}
+              </span>
+            </a>
+
+            <a class="nav-link {% if request.path.startswith(url_for('admin.courses_page')) %}active{% endif %}" href="{{ url_for('admin.courses_page') }}">Courses Details</a>
+
+            <a class="nav-link {% if request.path.startswith(url_for('admin.notices_page')) %}active{% endif %}" href="{{ url_for('admin.notices_page') }}">Notices</a>
+            <a class="nav-link {% if request.path.startswith(url_for('admin.exams_page')) %}active{% endif %}" href="{{ url_for('admin.exams_page') }}">Exams</a>
+
+            <a class="nav-link {% if request.path.startswith(url_for('admin.students_page')) %}active{% endif %}" href="{{ url_for('admin.students_page') }}">Students</a>
+
+
+
+            <hr>
+
+            <a class="nav-link mt-2" href="{{ url_for('auth.logout') }}">Logout</a>
+          </nav>
+        </div>
+      </aside>
+
+      <!-- Main content -->
+      <main class="col-lg-10 admin-main py-4">
+        {% block admin_content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_js %}
+{# placeholder for admin page JS; child templates should add their scripts #}
+{% endblock %}

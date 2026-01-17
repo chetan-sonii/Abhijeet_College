@@ -1,0 +1,207 @@
+Folder PATH listing for volume M
+Volume serial number is D09E-094E
+D:.
+¦   .env
+¦   config.py
+¦   dbs.py
+¦   plan.txt
+¦   requirements.txt
+¦   run.py
+¦   test.py
+¦   tree.txt
+¦   
++---app
+    ¦   extensions.py
+    ¦   models.py
+    ¦   tree.txt
+    ¦   __init__.py
+    ¦   
+    +---admin
+    ¦   ¦   routes.py
+    ¦   ¦   __init__.py
+    ¦   ¦   
+    ¦   +---__pycache__
+    ¦           routes.cpython-310.pyc
+    ¦           routes.cpython-312.pyc
+    ¦           __init__.cpython-310.pyc
+    ¦           __init__.cpython-312.pyc
+    ¦           
+    +---auth
+    ¦   ¦   forms.py
+    ¦   ¦   routes.py
+    ¦   ¦   __init__.py
+    ¦   ¦   
+    ¦   +---__pycache__
+    ¦           forms.cpython-310.pyc
+    ¦           forms.cpython-312.pyc
+    ¦           routes.cpython-310.pyc
+    ¦           routes.cpython-312.pyc
+    ¦           __init__.cpython-310.pyc
+    ¦           __init__.cpython-312.pyc
+    ¦           
+    +---public
+    ¦   ¦   routes.py
+    ¦   ¦   
+    ¦   +---__pycache__
+    ¦           routes.cpython-310.pyc
+    ¦           routes.cpython-312.pyc
+    ¦           
+    +---static
+    ¦   +---css
+    ¦   ¦   +---admin
+    ¦   ¦   +---auth
+    ¦   ¦   ¦       login.css
+    ¦   ¦   ¦       register.css
+    ¦   ¦   ¦       
+    ¦   ¦   +---public
+    ¦   ¦   ¦       index.css
+    ¦   ¦   ¦       
+    ¦   ¦   +---users
+    ¦   +---images
+    ¦   ¦   ¦   icon1.png
+    ¦   ¦   ¦   icon2.png
+    ¦   ¦   ¦   
+    ¦   ¦   +---uploads
+    ¦   ¦       +---avatars
+    ¦   ¦               15.jpg
+    ¦   ¦               6.jpg
+    ¦   ¦               default.png
+    ¦   ¦               
+    ¦   +---index
+    ¦   ¦   +---css
+    ¦   ¦   ¦       style.css
+    ¦   ¦   ¦       
+    ¦   ¦   +---fonts
+    ¦   ¦   ¦   +---icons
+    ¦   ¦   ¦       +---avatars
+    ¦   ¦   ¦       ¦       A.svg
+    ¦   ¦   ¦       ¦       B.svg
+    ¦   ¦   ¦       ¦       C.svg
+    ¦   ¦   ¦       ¦       D.svg
+    ¦   ¦   ¦       ¦       E.svg
+    ¦   ¦   ¦       ¦       F.svg
+    ¦   ¦   ¦       ¦       G.svg
+    ¦   ¦   ¦       ¦       H.svg
+    ¦   ¦   ¦       ¦       I.svg
+    ¦   ¦   ¦       ¦       J.svg
+    ¦   ¦   ¦       ¦       K.svg
+    ¦   ¦   ¦       ¦       L.svg
+    ¦   ¦   ¦       ¦       M.svg
+    ¦   ¦   ¦       ¦       N.svg
+    ¦   ¦   ¦       ¦       O.svg
+    ¦   ¦   ¦       ¦       P.svg
+    ¦   ¦   ¦       ¦       Q.svg
+    ¦   ¦   ¦       ¦       R.svg
+    ¦   ¦   ¦       ¦       S.svg
+    ¦   ¦   ¦       ¦       T.svg
+    ¦   ¦   ¦       ¦       U.svg
+    ¦   ¦   ¦       ¦       W.svg
+    ¦   ¦   ¦       ¦       Y.svg
+    ¦   ¦   ¦       ¦       Z.svg
+    ¦   ¦   ¦       ¦       
+    ¦   ¦   ¦       +---badges
+    ¦   ¦   ¦       ¦       Animal_Lover.svg
+    ¦   ¦   ¦       ¦       Bot.svg
+    ¦   ¦   ¦       ¦       Intermediate.svg
+    ¦   ¦   ¦       ¦       Lets_talk.svg
+    ¦   ¦   ¦       ¦       
+    ¦   ¦   ¦       +---font-awesome
+    ¦   ¦   ¦       ¦   +---css
+    ¦   ¦   ¦       ¦   ¦       font-awesome.min.css
+    ¦   ¦   ¦       ¦   ¦       
+    ¦   ¦   ¦       ¦   +---fonts
+    ¦   ¦   ¦       ¦           fontawesome-webfont3e6e.eot
+    ¦   ¦   ¦       ¦           fontawesome-webfont3e6e.svg
+    ¦   ¦   ¦       ¦           fontawesome-webfont3e6e.ttf
+    ¦   ¦   ¦       ¦           fontawesome-webfont3e6e.woff
+    ¦   ¦   ¦       ¦           fontawesome-webfont3e6e.woff2
+    ¦   ¦   ¦       ¦           fontawesome-webfontd41d.eot
+    ¦   ¦   ¦       ¦           
+    ¦   ¦   ¦       +---main
+    ¦   ¦   ¦           ¦   Logo_Forum.svg
+    ¦   ¦   ¦           ¦   New_Topic.svg
+    ¦   ¦   ¦           ¦   Pinned.svg
+    ¦   ¦   ¦           ¦   
+    ¦   ¦   ¦           +---mainfont
+    ¦   ¦   ¦               ¦   style.css
+    ¦   ¦   ¦               ¦   
+    ¦   ¦   ¦               +---fonts
+    ¦   ¦   ¦                       mainfont0218.svg
+    ¦   ¦   ¦                       mainfont0218.ttf
+    ¦   ¦   ¦                       mainfont0218.woff
+    ¦   ¦   ¦                       
+    ¦   ¦   +---images
+    ¦   ¦   ¦       signup-bg.png
+    ¦   ¦   ¦       topic-bg-gradient.jpg
+    ¦   ¦   ¦       topic-promo.jpg
+    ¦   ¦   ¦       
+    ¦   ¦   +---js
+    ¦   ¦   ¦       app.js
+    ¦   ¦   ¦       
+    ¦   ¦   +---vendor
+    ¦   ¦       +---animate
+    ¦   ¦       ¦       animate.min.css
+    ¦   ¦       ¦       
+    ¦   ¦       +---bootstrap
+    ¦   ¦       ¦   +---fonts
+    ¦   ¦       ¦   ¦       glyphicons-halflings-regular-2.html
+    ¦   ¦       ¦   ¦       glyphicons-halflings-regular-3.html
+    ¦   ¦       ¦   ¦       glyphicons-halflings-regular-4.html
+    ¦   ¦       ¦   ¦       glyphicons-halflings-regular-5.html
+    ¦   ¦       ¦   ¦       glyphicons-halflings-regular.html
+    ¦   ¦       ¦   ¦       glyphicons-halflings-regulard41d.html
+    ¦   ¦       ¦   ¦       
+    ¦   ¦       ¦   +---v3
+    ¦   ¦       ¦   ¦       bootstrap.min.css
+    ¦   ¦       ¦   ¦       bootstrap.min.js
+    ¦   ¦       ¦   ¦       
+    ¦   ¦       ¦   +---v4
+    ¦   ¦       ¦           bootstrap-grid.css
+    ¦   ¦       ¦           
+    ¦   ¦       +---jquery
+    ¦   ¦       ¦       jquery.min.js
+    ¦   ¦       ¦       
+    ¦   ¦       +---velocity
+    ¦   ¦               velocity.min.js
+    ¦   ¦               
+    ¦   +---js
+    ¦       +---admin
+    ¦       +---public
+    ¦       ¦       app.js
+    ¦       ¦       
+    ¦       +---users
+    +---templates
+    ¦   ¦   base.html
+    ¦   ¦   
+    ¦   +---admin
+    ¦   +---auth
+    ¦   ¦       signup.html
+    ¦   ¦       
+    ¦   +---partials
+    ¦   ¦       footer.html
+    ¦   ¦       header.html
+    ¦   ¦       
+    ¦   +---public
+    ¦   ¦       create-topic.html
+    ¦   ¦       index.html
+    ¦   ¦       single-topic.html
+    ¦   ¦       
+    ¦   +---users
+    +---users
+    ¦   ¦   routes.py
+    ¦   ¦   services.py
+    ¦   ¦   __init__.py
+    ¦   ¦   
+    ¦   +---__pycache__
+    ¦           routes.cpython-310.pyc
+    ¦           routes.cpython-312.pyc
+    ¦           __init__.cpython-310.pyc
+    ¦           __init__.cpython-312.pyc
+    ¦           
+    +---__pycache__
+            context_processors.cpython-312.pyc
+            extensions.cpython-312.pyc
+            models.cpython-312.pyc
+            sockets.cpython-312.pyc
+            __init__.cpython-312.pyc
+            

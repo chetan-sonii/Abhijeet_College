@@ -1,0 +1,77 @@
+{# templates/admin/apps.html #}
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Applications & Contacts</h2>
+    <div class="d-flex gap-2 align-items-center">
+      <input id="apps-search" class="form-control form-control-sm" placeholder="Search by name, email, message" style="width:320px;">
+      <button id="apps-refresh" class="btn btn-sm btn-outline-secondary">Refresh</button>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-body p-2">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Applicant / From</th>
+              <th>Summary</th>
+              <th>Status</th>
+              <th>Received</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="apps-list-body">
+            {% for it in items %}
+            <tr data-item-id="{{ it.id }}">
+              <td class="text-capitalize">{{ it.type }}</td>
+              <td>{{ it.name }} <div class="small text-muted">{{ it.email }}</div></td>
+              <td class="small text-muted">{{ it.summary }}</td>
+              <td>{{ it.status }}</td>
+              <td>{{ it.created_at.strftime('%Y-%m-%d %H:%M') if it.created_at else '' }}</td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-primary view-item" data-id="{{ it.id }}">View</button>
+                <button class="btn btn-sm btn-danger delete-item" data-id="{{ it.id }}">Delete</button>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="text-center small text-muted">No applications or contacts</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: view item -->
+<div class="modal fade" id="adminItemModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="adminItemModalLabel">Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="adminItemModalBody">
+        <!-- populated by JS -->
+        <div class="text-center small text-muted">Loading…</div>
+      </div>
+          <div class="modal-footer">
+        <div class="me-auto">
+          <button id="modal-mark-btn" type="button" class="btn btn-outline-secondary">Mark / Toggle</button>
+        </div>
+        <button type="button" class="btn btn-danger" id="modal-delete-btn">Delete</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script src="{{ url_for('static', filename='js/admin/apps.js') }}"></script>
+{% endblock %}

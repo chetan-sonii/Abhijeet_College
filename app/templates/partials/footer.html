@@ -1,0 +1,37 @@
+{# templates/partials/footer.html #}
+<footer class="site-footer bg-dark text-light py-5">
+  <div class="container">
+    <div class="row gy-4">
+      <div class="col-md-4">
+        <h5 class="text-white">About {{ config.SITE_NAME if config is defined else 'Our College' }}</h5>
+        <p class="small text-muted">Committed to academic excellence and practical learning. Build skills, get placed.</p>
+        <p class="small mb-0">© {{ current_year or '2026' }} {{ config.SITE_NAME if config is defined else 'College' }}</p>
+      </div>
+
+      <div class="col-md-3">
+        <h6 class="text-white">Quick Links</h6>
+        <ul class="list-unstyled small">
+          <li><a class="footer-link" href="{{ url_for('public.index') }}">Home</a></li>
+          <li><a class="footer-link" href="{{ url_for('public.about') }}">About</a></li>
+          <li><a class="footer-link" href="{{ url_for('public.contact') }}">Contact</a></li>
+          <li><a class="footer-link" href="{{ url_for('auth.login') }}">Login</a></li>
+        </ul>
+      </div>
+
+      <div class="col-md-3">
+        <h6 class="text-white">Contact</h6>
+        <p class="small mb-1"><strong>Email:</strong> admissions@{{ request.host.split(':')[0] if request else 'college.local' }}</p>
+        <p class="small mb-0"><strong>Phone:</strong> +91 99999 99999</p>
+      </div>
+
+      <div class="col-md-2">
+        <h6 class="text-white">Follow</h6>
+        <div class="d-flex gap-2">
+          <a class="btn btn-outline-light btn-sm" href="#" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+          <a class="btn btn-outline-light btn-sm" href="#" aria-label="Twitter"><i class="bi bi-twitter"></i></a>
+          <a class="btn btn-outline-light btn-sm" href="#" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>

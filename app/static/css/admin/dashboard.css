@@ -1,0 +1,31 @@
+/* static/css/admin/dashboard.css */
+
+.admin-sidebar {
+  background: #f8f9fb;
+  min-height: 100vh;
+  border-right: 1px solid rgba(0,0,0,0.04);
+  padding-left: 1rem;
+}
+
+.admin-sidebar .nav-link {
+  color: #374151;
+  padding: .45rem 0;
+}
+.admin-sidebar .nav-link.active { font-weight: 700; color: #0d6efd; }
+
+.admin-card {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(2,6,23,0.04);
+}
+.admin-card-title { color: #6b7280; font-size: 0.9rem; }
+.admin-card-value { font-size: 1.6rem; font-weight: 800; margin-top: .35rem; color: #111827; }
+.admin-card-sub { font-size: .85rem; color: #6b7280; margin-top: .35rem; }
+
+/* table tweaks */
+.table td, .table th { vertical-align: middle; }
+.card-header { background: #fff; }
+
+/* admin extra */
+#apps-list-body td pre { white-space: pre-wrap; }
+.modal-body pre { white-space: pre-wrap; background: #f8f9fa; padding: .6rem; border-radius: .25rem; }

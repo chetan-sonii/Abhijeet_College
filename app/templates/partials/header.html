@@ -1,0 +1,41 @@
+{# templates/partials/header.html #}
+
+<nav class="navbar navbar-expand-lg fixed-top creative-nav animate__animated animate__fadeInDown">
+    <div class="container nav-island shadow-sm">
+        
+        <a class="navbar-brand fw-bold" href="{{ url_for('public.index') }}">
+            <!-- <img src="{{ url_for('static', filename='index/images/Logo_Forum.svg') }}" alt="L" height="28" class="me-1"> -->
+            <span class="brand-text">College<span class="text-primary">Manager</span></span>
+        </a>
+
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#siteNavbar">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="siteNavbar">
+            <ul class="navbar-nav mx-auto nav-links-group">
+                <li class="nav-item"><a class="nav-link nav-btn" href="{{ url_for('public.index') }}">Home</a></li>
+                <li class="nav-item"><a class="nav-link nav-btn" href="{{ url_for('public.about') }}">About</a></li>
+                <li class="nav-item"><a class="nav-link nav-btn" href="{{ url_for('public.contact') }}">Contact</a></li>
+            </ul>
+
+            <div class="auth-group d-flex align-items-center">
+                {% if not current_user.is_authenticated %}
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-login me-2">Login</a>
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-register">Register</a>
+                {% else %}
+                    <div class="dropdown">
+                        <a class="btn btn-user dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            {{ current_user.first_name or "User" }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-3 animate__animated animate__fadeIn">
+                            <li><a class="dropdown-item" href="{{ url_for('users.dashboard') }}">Dashboard</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">Logout</a></li>
+                        </ul>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</nav>

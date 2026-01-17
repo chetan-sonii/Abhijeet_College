@@ -1,0 +1,429 @@
+{# templates/public/index.html #}
+{% extends "base.html" %}
+
+{% block title %}Home - {{ (config.SITE_NAME if config is defined else 'College') }}{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/public/index.css') }}">
+<style>
+    .notice-card-modern {
+        background: #fff;
+        border: 1px solid #eee;
+        border-radius: 12px;
+        transition: transform 0.2s;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        overflow: hidden;
+    }
+    .notice-card-modern:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 15px rgba(0,0,0,0.05);
+    }
+    /* Category Badge Colors */
+    .badge-Academic { background-color: #4e73df !important; } /* Blue */
+    .badge-Exam { background-color: #e74a3b !important; }     /* Red */
+    .badge-Event { background-color: #36b9cc !important; }    /* Cyan */
+    .badge-General { background-color: #858796 !important; }  /* Grey */
+    .badge-Placement { background-color: #1cc88a !important; } /* Green */
+    /* Styling for the content box to look like a document */
+.notice-content-box {
+    background-color: #f8f9fc;
+    border: 1px solid #e3e6f0;
+    color: #5a5c69;
+}
+
+/* Specific Header Colors based on Category (We will toggle these classes via JS) */
+.modal-header-Academic { background: linear-gradient(45deg, #4e73df, #224abe) !important; }
+.modal-header-Exam     { background: linear-gradient(45deg, #e74a3b, #be2617) !important; }
+.modal-header-Event    { background: linear-gradient(45deg, #36b9cc, #258391) !important; }
+.modal-header-Placement{ background: linear-gradient(45deg, #1cc88a, #13855c) !important; }
+.modal-header-General  { background: linear-gradient(45deg, #858796, #60616f) !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+  <!-- HERO -->
+  {# templates/public/index.html #}
+<section class="hero-section-modern">
+    <div class="container">
+        <div class="row align-items-center min-vh-75">
+            <div class="col-lg-6 mb-5 mb-lg-0 animate__animated animate__fadeInLeft">
+                <div class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill mb-3 fw-bold">
+                    🚀 Academic Excellence 2026
+                </div>
+                <h1 class="display-3 fw-bold hero-title-main mb-3">
+                    {{ hero.title|default("Welcome to Our College") }}
+                </h1>
+                <p class="lead text-muted mb-4 pb-2 hero-subtitle-main">
+                    {{ hero.subtitle|default("Empowering the next generation of leaders with world-class education.") }}
+                </p>
+ 
+                <div class="hero-actions d-flex gap-3 flex-wrap">
+                    <a href="{{ hero.cta_primary.url }}" class="btn btn-primary btn-lg rounded-pill px-5 shadow-lg cta-pulse">
+                        {{ hero.cta_primary.label }}
+                    </a>
+                    <a href="{{ hero.cta_secondary.url }}" class="btn btn-outline-dark btn-lg rounded-pill px-4">
+                        {{ hero.cta_secondary.label }}
+                    </a>
+                </div>
+
+                <div class="hero-stats-row mt-5 d-flex gap-4">
+                    <div class="stat-item">
+                        <span class="d-block h3 fw-bold mb-0">{{ stats.courses|default('12') }}+</span>
+                        <small class="text-uppercase text-muted fw-bold">Courses</small>
+                    </div>
+                    <div class="vr opacity-25"></div>
+                    <div class="stat-item">
+                        <span class="d-block h3 fw-bold mb-0">{{ stats.students|default('1.2k') }}</span>
+                        <small class="text-uppercase text-muted fw-bold">Students</small>
+                    </div>
+                    <div class="vr opacity-25"></div>
+                    <div class="stat-item">
+                        <span class="d-block h3 fw-bold mb-0">{{ stats.faculty|default('50') }}+</span>
+                        <small class="text-uppercase text-muted fw-bold">Faculty</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6 animate__animated animate__zoomIn animate__delay-1s">
+                <div class="hero-visual-container">
+                    <div class="hero-blob"></div>
+                    <img src="{{ hero.image }}" alt="Campus" class="hero-img-main rounded-4 shadow-2xl">
+                    
+                    <div class="floating-feature-card bg-white p-4 rounded-4 shadow-lg animate__animated animate__fadeInUp animate__delay-2s">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="icon-box bg-success-subtle text-success p-2 rounded-3 me-3">
+                                ✨
+                            </div>
+                            <h6 class="mb-0 fw-bold">Why Choose Us?</h6>
+                        </div>
+                        <p class="small text-muted mb-3">Industry-aligned courses & Hands-on labs.</p>
+                        <a href="{{ url_for('public.about') }}" class="text-decoration-none small fw-bold">
+                            Explore more <span class="ms-1">→</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+ 
+
+
+<!-- PROGRAMS WITH FILTERS -->
+<section class="programs-section py-5">
+  <div class="container">
+
+    <div class="section-head text-center mb-4">
+      <h2 class="section-title">Our Programs</h2>
+      <p class="section-sub">Filter programs by department and explore what we offer.</p>
+    </div>
+
+    <!-- FILTER BUTTONS -->
+    <div class="program-filters d-flex justify-content-center flex-wrap gap-2 mb-4">
+      <button class="filter-btn active" data-dept="">All</button>
+      {% for dept in departments %}
+        <button class="filter-btn" data-dept="{{ dept.id }}">
+          {{ dept.name }}
+        </button>
+      {% endfor %}
+    </div>
+
+    <!-- PROGRAM GRID -->
+    <div id="programs-grid" class="row g-4">
+
+      {# server-side fallback #}
+      {% for c in courses %}
+      <div class="col-md-6 col-lg-4 program-item">
+        <div class="program-card card h-100">
+          <img src="https://picsum.photos/seed/course-{{ c.id }}/500/350"
+               class="card-img-top" alt="">
+          <div class="card-body">
+            <span class="program-dept">{{ c.department.name }}</span>
+            <h5 class="card-title">{{ c.title }}</h5>
+            <p class="program-code">{{ c.code }}</p>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+
+    </div>
+  </div>
+</section>
+
+ <!-- Latest Notices -->
+<section class="notices-section py-5">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-end mb-4">
+      <div>
+        <span class="text-primary fw-bold text-uppercase small tracking-wider">Stay Updated</span>
+        <h2 class="fw-bold mb-0">Latest Notices</h2>
+      </div>
+<!--      <div class="action-buttons">-->
+<!--        <button id="refresh-notices" class="btn btn-light border btn-sm px-3 rounded-pill me-2">-->
+<!--          <span class="refresh-icon">↻</span> Refresh-->
+<!--        </button>-->
+<!--      </div>-->
+    </div>
+
+    <div id="notices-container" class="row g-4">
+      </div>
+  </div>
+
+ <div class="modal fade" id="noticeDetailModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg"> <div class="modal-content border-0 shadow-lg overflow-hidden">
+
+      <div class="modal-header text-white" id="modal-header-bg" style="background: linear-gradient(45deg, #4e73df, #224abe);">
+        <div class="d-flex flex-column">
+           <span class="badge bg-white text-primary mb-2 align-self-start" id="modal-category" style="font-size: 0.8rem;">General</span>
+           <h4 class="modal-title fw-bold" id="modal-title" style="text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Notice Title</h4>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body p-4">
+        <div class="d-flex align-items-center mb-4 text-muted small border-bottom pb-3">
+            <div class="me-4">
+                <i class="bi bi-calendar-event me-1"></i>
+                <span class="fw-semibold">Posted:</span> <span id="modal-date">Date</span>
+            </div>
+            <div>
+                <i class="bi bi-person-circle me-1"></i>
+                <span class="fw-semibold">From:</span> Admin Office
+            </div>
+        </div>
+
+        <div class="notice-content-box p-4 rounded-3 bg-light border">
+            <p id="modal-body" class="mb-0 text-dark" style="white-space: pre-wrap; line-height: 1.7; font-size: 1.05rem;">
+                </p>
+        </div>
+
+        <div class="mt-4">
+            <h6 class="fw-bold text-secondary mb-2 small text-uppercase">Attachments</h6>
+            <a href="#" class="btn btn-outline-secondary btn-sm rounded-pill">
+                <i class="bi bi-file-earmark-pdf me-1"></i> Document.pdf
+            </a>
+        </div>
+      </div>
+
+      <div class="modal-footer bg-light border-0">
+        <button type="button" class="btn btn-primary px-4 rounded-pill" data-bs-dismiss="modal">Acknowledge</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+</section>
+
+
+
+
+{# Counters section (animated) #}
+<section class="counters-section py-5">
+  <div class="container">
+    <div class="row text-center gy-4">
+      <div class="col-6 col-md-3">
+        <div class="counter-card">
+          <div class="counter-number" data-target="{{ stats.courses or 0 }}">0</div>
+          <div class="counter-label">Courses</div>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-3">
+        <div class="counter-card">
+          <div class="counter-number" data-target="{{ stats.students or 0 }}">0</div>
+          <div class="counter-label">Students</div>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-3">
+        <div class="counter-card">
+          <div class="counter-number" data-target="{{ stats.faculty or 0 }}">0</div>
+          <div class="counter-label">Faculty</div>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-3">
+        <div class="counter-card">
+          <div class="counter-number" data-target="{{ notices|length }}">0</div>
+          <div class="counter-label">Notices</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# Staff section #}
+<section class="staff-section py-5 bg-white">
+  <div class="container">
+    <div class="section-head d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h2 class="section-title">Our Faculty</h2>
+        <p class="section-sub text-muted">Experienced instructors and industry-aligned educators</p>
+      </div>
+      <div class="d-flex gap-2 align-items-center">
+        <label class="mb-0 me-2 small text-muted">Filter:</label>
+        <select id="staff-dept-filter" class="form-select form-select-sm" aria-label="Filter by department">
+          <option value="">All Departments</option>
+          {% for dept in departments %}
+            <option value="{{ dept.id }}">{{ dept.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div id="staff-grid" class="row g-4">
+      {# server-render fallback for staff -- faculties passed from route #}
+      {% for f in faculties %}
+        {% set user = f.user %}
+        <div class="col-6 col-md-4 col-lg-3 staff-item">
+          <div class="card staff-card h-100 text-center p-3">
+            <img
+  src="{{ f.photo_url | default(url_for('static', filename='index/images/placeholder-face.png')) }}"
+  class="rounded-circle mx-auto d-block"
+  alt="{{ user.first_name or user.email }}"
+>
+
+            <div class="card-body p-2">
+              <h6 class="mb-0">{{ (user.first_name or user.email.split('@')[0]) }} {% if user.last_name %}{{ user.last_name }}{% endif %}</h6>
+              <small class="text-muted d-block">{{ f.designation or "" }}</small>
+              <small class="text-muted d-block">{{ f.department.name if f.department else "" }}</small>
+              <p class="small text-muted mt-2 mb-0">{{ (f.bio[:120] + '…') if f.bio and f.bio|length > 120 else (f.bio or '') }}</p>
+            </div>
+          </div>
+        </div>
+      {% else %}
+        <div class="col-12">
+          <div class="alert alert-info">No faculty listed yet.</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{# ADMISSIONS CTA / ENCOURAGEMENT SECTION #}
+<section class="admissions-section py-5">
+  <div class="container">
+    <div class="row align-items-center gy-4">
+      <div class="col-lg-7">
+        <h2 class="admissions-title">Ready to join {{ config.SITE_NAME if config is defined else 'Our College' }}?</h2>
+        <p class="admissions-sub lead text-muted">
+          Take the next step — apply now or request more information about our programs, scholarships, and campus life.
+        </p>
+
+        <ul class="admissions-list list-unstyled mb-4">
+          <li>✓ Industry-aligned curriculum</li>
+          <li>✓ Scholarship & financial aid support</li>
+          <li>✓ Campus placements & internships</li>
+        </ul>
+
+        <div class="d-flex gap-2">
+          <a href="#" id="admit-enroll" class="btn btn-primary btn-lg">Apply Now</a>
+          <a href="{{ url_for('public.contact') }}" class="btn btn-outline-primary btn-lg">Contact Admissions</a>
+        </div>
+      </div>
+
+      <div class="col-lg-5">
+        <div class="card shadow-sm admissions-card">
+          <img src="{{ hero.image }}" alt="Campus" class="card-img-top">
+          <div class="card-body">
+            <h6 class="card-title mb-1">Upcoming Intake</h6>
+            <p class="small text-muted mb-0">Next admission cycle opens soon — join the info session to learn more.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{# ENROLL CTA: floating button + modal #}
+<!-- Floating Enroll Button -->
+<button id="enroll-cta" class="enroll-cta btn btn-primary btn-lg" title="Apply now">
+  Enroll Now
+</button>
+
+<!-- Enroll Modal -->
+<div class="modal fade" id="enrollModal" tabindex="-1" aria-labelledby="enrollModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form id="enroll-form" class="modal-content" method="post" action="{{ url_for('public.apply') }}">
+      <div class="modal-header">
+        <h5 class="modal-title" id="enrollModalLabel">Apply / Request Info</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- progressive: server-side will still handle normal POST -->
+        <div class="mb-3">
+          <label for="app-name" class="form-label">Full name</label>
+          <input type="text" class="form-control" id="app-name" name="name" required>
+        </div>
+        <div class="mb-3">
+          <label for="app-email" class="form-label">Email</label>
+          <input type="email" class="form-control" id="app-email" name="email" required>
+        </div>
+        <div class="mb-3">
+          <label for="app-program" class="form-label">Program of interest</label>
+          <select id="app-program" name="program" class="form-select">
+            <option value="">General Enquiry</option>
+            {% for c in courses %}
+              <option value="{{ c.id }}">{{ c.title }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="app-message" class="form-label">Message</label>
+          <textarea class="form-control" id="app-message" name="message" rows="3"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="submit" id="enroll-submit" class="btn btn-primary">Send Application</button>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- CAMPUS LOCATION -->
+<section class="campus-map-section py-5 bg-light">
+  <div class="container">
+    <div class="row align-items-center gy-4">
+      <div class="col-lg-6">
+        <h2 class="section-title">Visit Our Campus</h2>
+        <p class="text-muted">
+          Our campus is centrally located and easily accessible by public transport.
+          Come explore our facilities and vibrant student life.
+        </p>
+
+        <ul class="list-unstyled small">
+          <li>📍 Main Campus, Academic Block</li>
+          <li>🚌 Bus & Metro connectivity</li>
+          <li>🏫 Modern classrooms & labs</li>
+        </ul>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="map-wrapper">
+          <iframe
+            title="College Location"
+            <iframe
+        title="College Location"
+        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1854.4325469773662!2d81.65907698668723!3d21.26062279405673!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a28dd6494e1c27b%3A0x91d6045f4fa8158a!2sSt.%20Vincent%20Pallotti%20College!5e1!3m2!1sen!2sin!4v1768150360790!5m2!1sen!2sin"
+        loading="lazy">
+      </iframe>
+            loading="lazy">
+          </iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% include 'partials/footer.html' %}
+
+{% endblock %}
+
+{% block page_js %}
+<script src="{{ url_for('static', filename='js/public/index.js') }}"></script>
+ {{ super() }}
+  <script src="{{ url_for('static', filename='js/public/counters.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/public/staff.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/public/enroll.js') }}"></script>
+
+
+{% endblock %}

@@ -1,0 +1,126 @@
+{# templates/admin/exams.html #}
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+
+<div class="container-fluid">
+  {# at top of templates/admin/exams.html, inside the header area #}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>Exams</h2>
+  <div class="d-flex gap-2 align-items-center">
+    <select id="filter-department" class="form-select form-select-sm" style="width:220px;">
+      <option value="">All departments</option>
+      {% for d in department %}
+        <option value="{{ d.id }}">{{ d.name }}</option>
+      {% endfor %}
+    </select>
+    <input id="filter-q" class="form-control form-control-sm" placeholder="Search exam / course / section" style="width:220px;">
+    <input id="filter-date-from" type="date" class="form-control form-control-sm" style="width:160px;">
+    <!-- <input id="filter-date-to" type="date" class="form-control form-control-sm" style="width:160px;"> -->
+    <button id="filter-exams-btn" class="btn btn-sm btn-outline-secondary">Filter</button>
+    <button id="exam-create-btn" class="btn btn-primary btn-sm">Create exam</button>
+  </div>
+</div>
+
+
+  <div class="card">
+    <div class="card-body">
+      <table id="exams-table" class="table mb-0">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Title</th>
+      <th>Course / Section</th>
+      <th>Date</th>
+      <th>Total Marks</th>
+      <th class="text-end">Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for e in exams %}
+    <tr data-eid="{{ e.id }}" data-section-id="{{ e.section.id if e.section else '' }}">
+      <td>{{ e.id }}</td>
+      <td>{{ e.name }}</td><!-- ORM: Exam.name -->
+      <td>
+        {% if e.section and e.section.course %}
+          {{ e.section.course.title }}
+          <div class="small text-muted">{{ e.section.code }}</div>
+        {% else %}
+          -
+        {% endif %}
+      </td>
+      <td>{{ e.exam_date.strftime("%Y-%m-%d") if e.exam_date else '' }}</td>
+      <td>{{ e.total_marks or '—' }}</td>
+      <td class="text-end">
+        <button class="btn btn-sm btn-outline-primary btn-results" data-id="{{ e.id }}">Results</button>
+        <button class="btn btn-sm btn-outline-secondary btn-edit" data-id="{{ e.id }}">Edit</button>
+        <button class="btn btn-sm btn-outline-danger btn-delete" data-id="{{ e.id }}">Delete</button>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="text-center small text-muted">No exams yet</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+    </div>
+  </div>
+</div>
+
+<!-- Create exam modal -->
+<div class="modal fade" id="examCreateModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <form id="exam-create-form" class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Create Exam</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Title</label>
+            <input id="exam-title" name="title" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Section</label>
+            <select id="exam-section" name="section_id" class="form-select" required>
+              <option value="">-- select section --</option>
+              {% for s in sections %}
+                <option value="{{ s.id }}">{{ s.course.title if s.course else '' }} — {{ s.code }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Exam date</label>
+            <input id="exam-date" name="exam_date" type="date" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Total marks</label>
+            <input id="exam-total" name="total_marks" type="number" step="1" class="form-control">
+          </div>
+        </div>
+        <div class="modal-footer"><button class="btn btn-primary" type="submit">Create</button><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Results modal -->
+<div class="modal fade" id="examResultsModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Exam Results</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body" id="exam-results-body">
+        <div class="text-center small text-muted">Loading…</div>
+      </div>
+      <div class="modal-footer">
+        <button id="save-results-btn" class="btn btn-primary">Save results</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script src="{{ url_for('static', filename='js/admin/exams.js') }}"></script>
+{% endblock %}
+
+

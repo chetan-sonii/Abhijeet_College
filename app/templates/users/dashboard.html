@@ -1,0 +1,75 @@
+{# templates/users/dashboard.html #}
+{% extends "users/base.html" %}
+
+{% block page_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/users/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/users/theme.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/users/sidebar.css') }}">
+{% endblock %}
+
+{% block user_content %}
+<div class="container py-4">
+  <h1 class="mb-3">Welcome, {{ current_user.username or current_user.email }}</h1>
+
+  <div class="row g-3" id="overview-cards">
+    <div class="col-md-3">
+      <div class="card card-stat">
+        <div class="card-body">
+          <h6>Enrolled courses</h6>
+          <div class="stat-value" id="stat-enroll-count">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card card-stat">
+        <div class="card-body">
+          <h6>Upcoming exams</h6>
+          <div class="stat-value" id="stat-upcoming-count">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card card-stat">
+        <div class="card-body">
+          <h6>Total fees</h6>
+          <div class="stat-value" id="stat-total-fees">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card card-stat">
+        <div class="card-body">
+          <h6>Remaining</h6>
+          <div class="stat-value" id="stat-remaining">—</div>
+          <button class="btn btn-sm btn-primary mt-2" id="quick-pay-btn">Pay now</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-4">
+    <div class="col-md-7">
+      <div class="card">
+        <div class="card-header">Upcoming exams</div>
+        <div class="card-body" id="upcoming-exams">
+          <div class="small text-muted">Loading…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-5">
+      <div class="card">
+        <div class="card-header">Recent payments</div>
+        <div class="card-body" id="recent-payments">
+          <div class="small text-muted">Loading…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script src="{{ url_for('static', filename='js/users/dashboard.js') }}"></script>
+<script src="{{ url_for('static', filename='js/users/theme.js') }}"></script>
+{% endblock %}

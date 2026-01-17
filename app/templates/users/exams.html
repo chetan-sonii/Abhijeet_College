@@ -1,0 +1,21 @@
+{# templates/users/exams.html #}
+{% extends "users/base.html" %}
+{% block page_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/users/exams.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/users/theme.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/users/sidebar.css') }}">
+{% endblock %}
+
+{% block user_content %}
+<div class="container py-4">
+  <h2>My Exams</h2>
+  <div id="my-exams-area">
+    <div class="small text-muted">Loading…</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script src="{{ url_for('static', filename='js/users/exams.js') }}"></script>
+<script src="{{ url_for('static', filename='js/users/theme.js') }}"></script>
+{% endblock %}

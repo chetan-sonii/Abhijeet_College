@@ -1,0 +1,279 @@
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="h3 fw-bold text-gray-800">Notice Board</h2>
+        <p class="mb-0 text-muted small">Manage campus announcements.</p>
+    </div>
+    <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#createNoticeModal">
+        <i class="bi bi-plus-lg me-1"></i> New Notice
+    </button>
+  </div>
+
+  <div class="card shadow border-0">
+    <div class="card-body p-0">
+      <ul class="list-group list-group-flush" id="notices-list">
+        {% for n in notices %}
+        <li class="list-group-item p-3 d-flex justify-content-between align-items-start hover-bg-light" id="notice-row-{{ n.id }}">
+          <div class="me-3">
+            <div class="d-flex align-items-center mb-1">
+                {% if n.is_pinned %}
+                    <span class="text-danger me-2" title="Pinned to Top"><i class="bi bi-pin-angle-fill"></i></span>
+                {% endif %}
+
+                <span class="fw-bold text-dark">{{ n.title }}</span>
+
+                {% set badge_color = 'secondary' %}
+                {% if n.category.value == 'Exam' %}{% set badge_color = 'danger' %}
+                {% elif n.category.value == 'Academic' %}{% set badge_color = 'primary' %}
+                {% elif n.category.value == 'Event' %}{% set badge_color = 'info' %}
+                {% elif n.category.value == 'Placement' %}{% set badge_color = 'success' %}
+                {% endif %}
+                <span class="badge bg-{{ badge_color }} ms-2 rounded-pill" style="font-size: 0.7rem;">{{ n.category.value }}</span>
+            </div>
+            <div class="small text-muted mb-2">
+                {{ n.posted_on.strftime('%d %b %Y') }}
+            </div>
+            <p class="mb-0 text-secondary small text-truncate-multiline" style="max-width: 600px;">
+                {{ n.body }}
+            </p>
+          </div>
+
+          <div class="d-flex align-items-center">
+            <button class="btn btn-sm btn-outline-primary me-2 edit-notice-btn"
+                    data-id="{{ n.id }}"
+                    data-title="{{ n.title }}"
+                    data-body="{{ n.body }}"
+                    data-category="{{ n.category.value }}"
+                    data-pinned="{{ 'true' if n.is_pinned else 'false' }}"
+                    title="Edit">
+                <i class="bi bi-pencil-square"></i>
+            </button>
+
+            <button class="btn btn-sm btn-outline-danger delete-notice-btn"
+                    data-id="{{ n.id }}"
+                    title="Delete">
+                <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </li>
+        {% else %}
+        <li class="list-group-item text-center py-5">
+            <p class="text-muted">No notices found.</p>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="createNoticeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form id="create-notice-form">
+        <div class="modal-header">
+            <h5 class="modal-title fw-bold">New Notice</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Title</label>
+            <input name="title" id="create-title" class="form-control" required>
+          </div>
+          <div class="row mb-3">
+              <div class="col-6">
+                <label class="form-label small fw-bold">Category</label>
+                <select name="category" id="create-category" class="form-select">
+                    <option value="General">General</option>
+                    <option value="Academic">Academic</option>
+                    <option value="Event">Event</option>
+                    <option value="Exam">Exam</option>
+                    <option value="Placement">Placement</option>
+                </select>
+              </div>
+              <div class="col-6 d-flex align-items-center pt-4">
+                  <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="create-pinned">
+                      <label class="form-check-label" for="create-pinned">Pin to Top</label>
+                  </div>
+              </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Body</label>
+            <textarea name="body" id="create-body" class="form-control" rows="4" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Publish</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="editNoticeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form id="edit-notice-form">
+        <input type="hidden" id="edit-id"> <div class="modal-header bg-light">
+            <h5 class="modal-title fw-bold">Edit Notice</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Title</label>
+            <input name="title" id="edit-title" class="form-control" required>
+          </div>
+          <div class="row mb-3">
+              <div class="col-6">
+                <label class="form-label small fw-bold">Category</label>
+                <select name="category" id="edit-category" class="form-select">
+                    <option value="General">General</option>
+                    <option value="Academic">Academic</option>
+                    <option value="Event">Event</option>
+                    <option value="Exam">Exam</option>
+                    <option value="Placement">Placement</option>
+                </select>
+              </div>
+              <div class="col-6 d-flex align-items-center pt-4">
+                  <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="edit-pinned">
+                      <label class="form-check-label" for="edit-pinned">Pin to Top</label>
+                  </div>
+              </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Body</label>
+            <textarea name="body" id="edit-body" class="form-control" rows="4" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content">
+      <div class="modal-body text-center p-4">
+        <div class="text-danger mb-3">
+            <i class="bi bi-exclamation-circle display-1"></i>
+        </div>
+        <h5 class="fw-bold mb-2">Delete Notice?</h5>
+        <p class="text-muted small mb-4">This action cannot be undone.</p>
+        <div class="d-grid gap-2">
+            <button type="button" id="confirm-delete-btn" class="btn btn-danger">Yes, Delete it</button>
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block page_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+    // --- 1. HANDLE CREATE ---
+    const createForm = document.getElementById('create-notice-form');
+    createForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const payload = {
+            title: document.getElementById('create-title').value,
+            category: document.getElementById('create-category').value,
+            is_pinned: document.getElementById('create-pinned').checked,
+            body: document.getElementById('create-body').value
+        };
+        fetch('/admin/api/notices/create', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        }).then(() => window.location.reload());
+    });
+
+    // --- 2. HANDLE EDIT ---
+    const editModal = new bootstrap.Modal(document.getElementById('editNoticeModal'));
+    const editForm = document.getElementById('edit-notice-form');
+
+    // Open Edit Modal & Populate Data
+    document.querySelectorAll('.edit-notice-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Fill fields from data attributes
+            document.getElementById('edit-id').value = this.dataset.id;
+            document.getElementById('edit-title').value = this.dataset.title;
+            document.getElementById('edit-category').value = this.dataset.category;
+            document.getElementById('edit-body').value = this.dataset.body;
+            document.getElementById('edit-pinned').checked = (this.dataset.pinned === 'true');
+
+            editModal.show();
+        });
+    });
+
+    // Submit Edit
+    editForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const nid = document.getElementById('edit-id').value;
+        const payload = {
+            title: document.getElementById('edit-title').value,
+            category: document.getElementById('edit-category').value,
+            is_pinned: document.getElementById('edit-pinned').checked,
+            body: document.getElementById('edit-body').value
+        };
+
+        fetch(`/admin/api/notices/${nid}/update`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        }).then(res => res.json())
+          .then(data => {
+              if(data.status === 'ok') window.location.reload();
+              else alert('Error updating notice: ' + data.message);
+          });
+    });
+
+    // --- 3. HANDLE DELETE ---
+    let deleteId = null;
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+
+    document.querySelectorAll('.delete-notice-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            deleteId = this.dataset.id; // Store ID
+            deleteModal.show();         // Show confirmation
+        });
+    });
+
+    document.getElementById('confirm-delete-btn').addEventListener('click', function() {
+        if(!deleteId) return;
+
+        // Disable button during request
+        this.disabled = true;
+        this.textContent = "Deleting...";
+
+        fetch(`/admin/api/notices/${deleteId}/delete`, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    // Remove row instantly
+                    document.getElementById(`notice-row-${deleteId}`).remove();
+                    deleteModal.hide();
+                } else {
+                    alert('Error deleting icon');
+                }
+                // Reset button
+                this.disabled = false;
+                this.textContent = "Yes, Delete it";
+            });
+    });
+
+});
+</script>
+{% endblock %}
