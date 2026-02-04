@@ -252,3 +252,95 @@ function renderExamRows(exams) {
   // Initial load
   loadCurrentFilters();
 });
+
+
+
+// Function to Load Marks into the Modal
+function openMarksModal(examId) {
+    const modal = new bootstrap.Modal(document.getElementById('marksModal'));
+    const tableBody = document.querySelector('#marksTable tbody');
+    const saveBtn = document.getElementById('saveMarksBtn');
+
+    // Clear previous data
+    tableBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading...</td></tr>';
+
+    // Store exam ID on the save button for later use
+    saveBtn.dataset.examId = examId;
+
+    fetch(`/admin/api/exams/${examId}/results`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('marksModalLabel').textContent = `Enter Marks for ${data.exam_title}`;
+            tableBody.innerHTML = ''; // Clear loading message
+
+            if (data.results.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="4" class="text-center">No students enrolled in this section.</td></tr>';
+                return;
+            }
+
+            // Generate Rows
+            data.results.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.admission_no}</td>
+                    <td>${row.student_name}</td>
+                    <td>
+                        <input type="number"
+                               class="form-control marks-input"
+                               data-enrollment-id="${row.enrollment_id}"
+                               value="${row.marks_obtained}"
+                               max="${data.total_marks}"
+                               min="0" step="0.5">
+                    </td>
+                    <td>
+                        <input type="text"
+                               class="form-control remarks-input"
+                               value="${row.remarks || ''}"
+                               placeholder="Optional">
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            modal.show();
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Failed to load students.");
+        });
+}
+
+// Function to Save Marks
+document.getElementById('saveMarksBtn').addEventListener('click', function() {
+    const examId = this.dataset.examId;
+    const inputs = document.querySelectorAll('.marks-input');
+    const payload = [];
+
+    inputs.forEach(input => {
+        const row = input.closest('tr');
+        const remarks = row.querySelector('.remarks-input').value;
+
+        payload.push({
+            enrollment_id: input.dataset.enrollmentId, // Crucial: matches backend expectation
+            marks_obtained: input.value,
+            remarks: remarks
+        });
+    });
+
+    // Send Data
+    fetch(`/admin/api/exams/${examId}/results`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ results: payload })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.status === 'success') {
+            alert("Marks saved successfully!");
+            bootstrap.Modal.getInstance(document.getElementById('marksModal')).hide();
+        } else {
+            alert("Error saving marks: " + data.message);
+        }
+    })
+    .catch(err => console.error(err));
+});

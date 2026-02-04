@@ -934,3 +934,88 @@ def api_exams():
         )
     current_app.logger.debug(exams)
     return jsonify({"status": "ok", "exams": exams})
+
+
+@admin_bp.route("/api/exams/<int:exam_id>/results", methods=["GET"])
+def api_exam_results(exam_id):
+    """
+    Fetch all students enrolled in the exam's section,
+    joined with their existing results (if any).
+    """
+    exam = Exam.query.get_or_404(exam_id)
+    section = exam.section
+
+    if not section:
+        return jsonify({"error": "No section attached to this exam"}), 400
+
+    # 1. Get all students enrolled in this section
+    enrollments = Enrollment.query.filter_by(section_id=section.id).all()
+
+    data = []
+    for enr in enrollments:
+        # 2. Check if a result already exists for this exam + enrollment
+        result = ExamResult.query.filter_by(exam_id=exam.id, enrollment_id=enr.id).first()
+
+        student_name = enr.student.user.full_name() if enr.student and enr.student.user else "Unknown"
+        admission_no = enr.student.admission_no if enr.student else "N/A"
+
+        data.append({
+            "enrollment_id": enr.id,
+            "student_name": student_name,
+            "admission_no": admission_no,
+            "marks_obtained": result.marks_obtained if result else "",
+            "remarks": result.remarks if result else ""
+        })
+
+    return jsonify({
+        "exam_title": exam.name,
+        "total_marks": exam.total_marks,
+        "results": data
+    })
+
+
+@admin_bp.route("/api/exams/<int:exam_id>/results", methods=["POST"])
+def api_exam_results_save(exam_id):
+    """
+    Save or update marks for the students.
+    """
+    exam = Exam.query.get_or_404(exam_id)
+    data = request.get_json()
+
+    if not data or "results" not in data:
+        return jsonify({"message": "Invalid data"}), 400
+
+    try:
+        for row in data["results"]:
+            enrollment_id = row.get("enrollment_id")
+            marks_str = str(row.get("marks_obtained", "")).strip()
+
+            # Skip invalid enrollment IDs
+            if not enrollment_id:
+                continue
+
+            # Find existing result or create new one
+            result = ExamResult.query.filter_by(exam_id=exam.id, enrollment_id=enrollment_id).first()
+
+            if not result:
+                result = ExamResult(exam_id=exam.id, enrollment_id=enrollment_id)
+                db.session.add(result)
+
+            # Handle Marks (convert to float or None)
+            if marks_str == "":
+                result.marks_obtained = None
+            else:
+                try:
+                    result.marks_obtained = float(marks_str)
+                except ValueError:
+                    continue  # Skip bad data
+
+            # Optional: Remarks
+            result.remarks = row.get("remarks", "")
+
+        db.session.commit()
+        return jsonify({"message": "Results saved successfully", "status": "success"})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": str(e), "status": "error"}), 500
