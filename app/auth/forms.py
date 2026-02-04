@@ -31,40 +31,12 @@ class LoginForm(FlaskForm):
 class RegisterForm(FlaskForm):
     class Meta:
         csrf = False
-    username = StringField(
-        "Username",
-        validators=[
-            DataRequired(),
-            Length(min=3, max=50),
-            Regexp(
-                r"^[A-Za-z0-9_]+$",
-                message="Username can contain only letters, numbers, and underscores."
-            )
-        ]
-    )
 
-    email = StringField(
-        "Email",
-        validators=[
-            DataRequired(),
-            Email(),
-            Length(max=120)
-        ]
-    )
+    # Replace username with these two fields
+    first_name = StringField("First Name", validators=[DataRequired(), Length(max=120)])
+    last_name = StringField("Last Name", validators=[Length(max=120)])
 
-    password = PasswordField(
-        "Password",
-        validators=[
-            DataRequired(),
-            Length(min=6)
-        ]
-    )
-
-    phone = StringField(
-        "Phone",
-        validators=[
-            Length(max=15)
-        ]
-    )
-
+    email = StringField("Email", validators=[DataRequired(), Email(), Length(max=120)])
+    password = PasswordField("Password", validators=[DataRequired(), Length(min=6)])
+    phone = StringField("Phone", validators=[Length(max=15)])
     submit = SubmitField("Create Account")

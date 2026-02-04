@@ -1,10 +1,8 @@
 # app/auth/routes.py
 
 from urllib.parse import urlparse
-
 from flask import render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_user, logout_user, current_user
-
 from . import auth_bp
 from app.auth.forms import LoginForm, RegisterForm
 from app.models import User
@@ -31,20 +29,18 @@ def login():
         email = form.email.data.strip().lower()
         user = User.query.filter_by(email=email).first()
 
-        # --- ERROR WAS HERE ---
-        # If user is None (invalid email) or password is wrong:
+        # Check if user exists and password is correct
         if not user or not user.check_password(form.password.data):
-            # login_user(user)  <-- REMOVE THIS LINE. You cannot login a user that doesn't exist!
             flash("Invalid email or password", "danger")
             return render_template("auth/login.html", form=form)
 
-        # --- Check Active Status ---
+        # Check Active Status
         if not user.is_active:
             flash("Your account is awaiting admin approval. Please wait for confirmation.", "warning")
             return render_template("auth/login.html", form=form)
 
-        # --- SUCCESS ---
-        login_user(user)  # Only login here, after all checks pass
+        # Success
+        login_user(user)
         flash("Logged in successfully", "success")
 
         # Safe next-page redirect
@@ -66,12 +62,6 @@ def register():
 
     form = RegisterForm()
 
-    if request.method == "POST":
-        current_app.logger.debug("REGISTER POST: request.form keys = %s", list(request.form.keys()))
-        current_app.logger.debug("REGISTER POST: form.data = %s", form.data)
-        current_app.logger.debug("REGISTER POST: form.validate() = %s", form.validate())
-        current_app.logger.debug("REGISTER POST: form.errors = %s", form.errors)
-
     if form.validate_on_submit():
         email = form.email.data.strip().lower()
 
@@ -80,36 +70,32 @@ def register():
             flash("Email already registered. Please login.", "warning")
             return redirect(url_for("auth.login"))
 
-        # Optional: check duplicate username
-        if User.query.filter_by(username=form.username.data.strip()).first():
-            flash("Username already taken. Choose another.", "warning")
-            return redirect(url_for("auth.register"))
-
+        # Create user with fields matching your updated User model
         user = User(
-            username=form.username.data.strip(),
+            first_name=form.first_name.data.strip(),
+            last_name=form.last_name.data.strip(),
             email=email,
             phone=form.phone.data.strip() if form.phone.data else None,
             is_admin=False,
-            is_active=False  # <-- new: created as inactive / pending
+            is_active=False  # created as inactive / pending
         )
         user.set_password(form.password.data)
 
         db.session.add(user)
-        db.session.commit()  # user.id exists
-
-        user.ensure_avatar()
         db.session.commit()
 
-        # DO NOT auto-login. Instead inform user to wait for admin approval.
+        # --- FIX: REMOVED user.ensure_avatar() call ---
+        # The User model does not have this method, and it is not needed
+        # for basic registration.
+
         flash(
             "Registration received. Your account is pending admin approval. You will receive confirmation once an administrator approves your account.",
             "info"
         )
 
-        # Optionally send an email to admin (not implemented here)
         return redirect(url_for("auth.login"))
 
-    # If post with errors, keep previous toasts logic
+    # If post with errors
     if request.method == "POST" and form.errors:
         for field, errors in form.errors.items():
             for err in errors:

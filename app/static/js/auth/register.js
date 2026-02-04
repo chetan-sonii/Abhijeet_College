@@ -41,15 +41,18 @@ document.addEventListener("DOMContentLoaded", function () {
   // Basic client-side form check
   if (form) {
     form.addEventListener("submit", function (e) {
-      var username = document.getElementById("username").value.trim();
-      var email = document.getElementById("email").value.trim();
-      var pwd = pwdInput.value || "";
+      // Inside the form submit event listener
+var firstName = document.getElementById("first_name").value.trim();
+var email = document.getElementById("email").value.trim();
+var pwd = pwdInput.value || "";
 
-      if (!username || !email || pwd.length < 6) {
-        e.preventDefault();
-        showInlineError("Please fill required fields correctly. Password must be at least 6 characters.");
-        return false;
-      }
+if (!firstName || !email || pwd.length < 6) {
+    e.preventDefault();
+    showInlineError("Please fill required fields correctly.");
+    return false;
+}
+
+
       // let server handle duplicate username/email
     });
   }

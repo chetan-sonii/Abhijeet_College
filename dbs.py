@@ -33,9 +33,10 @@ from app.models import (
 
     Notice,
     NoticeCategory,  # <--- NEW IMPORT
-    Event,
+    Event, Semester,
 
 )
+from run import app
 
 # ---------- configuration ----------
 NUM_STUDENTS = 12
@@ -102,8 +103,8 @@ def seed_users(departments):
 
     # Admin user
     if not User.query.filter_by(email="admin@college.com").first():
-        admin = User(email="admin@college.local", first_name="Super", last_name="Admin", role=UserRole.ADMIN)
-        admin.set_password("change-me")
+        admin = User(email="admin@college.com", first_name="Super", last_name="Admin", role=UserRole.ADMIN)
+        admin.set_password("admin123")
         ensure(admin)
         created_admin = admin
     else:
@@ -343,12 +344,102 @@ def seed_all(force=False):
         seed_fees_and_payments(students)
 
         seed_notices_events(admin_user)
+        seed_sections()
 
 
         # final commit
         db.session.commit()
         print("Seeding complete.")
 
+
+def seed_sections():
+    with app.app_context():
+        print("🌱 Seeding Sections and Dependencies...")
+
+        # 1. Ensure a Department exists
+        dept = Department.query.filter_by(code="CSE").first()
+        if not dept:
+            dept = Department(code="CSE", name="Computer Science Engineering")
+            db.session.add(dept)
+            db.session.commit()
+            print("   -> Created Department: CSE")
+
+        # 2. Ensure a Semester exists
+        semester = Semester.query.filter_by(name="Fall 2025").first()
+        if not semester:
+            semester = Semester(
+                name="Fall 2025",
+                start_date=date(2025, 8, 1),
+                end_date=date(2025, 12, 15),
+                is_active=True
+            )
+            db.session.add(semester)
+            db.session.commit()
+            print("   -> Created Semester: Fall 2025")
+
+        # 3. Ensure a Course exists
+        course = Course.query.filter_by(code="CS101").first()
+        if not course:
+            course = Course(
+                code="CS101",
+                title="Intro to Programming",
+                credits=4,
+                department_id=dept.id
+            )
+            db.session.add(course)
+            db.session.commit()
+            print("   -> Created Course: CS101")
+
+        # 4. Ensure a Faculty member exists (to assign as instructor)
+        # First, check for the User
+        faculty_user = User.query.filter_by(email="prof@college.edu").first()
+        if not faculty_user:
+            faculty_user = User(
+                email="prof@college.edu",
+                first_name="Alan",
+                last_name="Turing",
+                role=UserRole.FACULTY,
+                is_active=True
+            )
+            faculty_user.set_password("password123")
+            db.session.add(faculty_user)
+            db.session.commit()
+
+        # Second, check for the Profile
+        faculty_profile = FacultyProfile.query.filter_by(user_id=faculty_user.id).first()
+        if not faculty_profile:
+            faculty_profile = FacultyProfile(
+                user_id=faculty_user.id,
+                employee_id="FAC-001",
+                designation="Senior Professor",
+                department_id=dept.id
+            )
+            db.session.add(faculty_profile)
+            db.session.commit()
+            print("   -> Created Faculty: Alan Turing")
+
+        # 5. Create the Section
+        section_code = "CS101-A"
+        section = Section.query.filter_by(code=section_code).first()
+
+        if not section:
+            section = Section(
+                code=section_code,
+                course_id=course.id,
+                semester_id=semester.id,
+                capacity=60,
+                room="Room 304",
+                schedule="Mon/Wed 10:00 AM - 11:30 AM"
+            )
+
+            # Add relationship: Assign the faculty to this section
+            section.instructors.append(faculty_profile)
+
+            db.session.add(section)
+            db.session.commit()
+            print(f"   ✅ Created Section: {section.code} (Course: {course.title})")
+        else:
+            print(f"   ℹ️  Section {section_code} already exists.")
 # ---------- CLI ----------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Seed the database with mock college data.")

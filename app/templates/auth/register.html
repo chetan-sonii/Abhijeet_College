@@ -25,13 +25,16 @@
             <form method="post" action="{{ url_for('auth.register') }}" id="register-form" novalidate>
               {{ form.hidden_tag() }}
 
-              <div class="mb-3">
-                <label for="username" class="form-label">Username</label>
-                {{ form.username(class="form-control", id="username", placeholder="username (letters, numbers, _ )") }}
-                {% if form.username.errors %}
-                  <div class="form-text text-danger">{{ form.username.errors[0] }}</div>
-                {% endif %}
-              </div>
+              <div class="row">
+  <div class="col-md-6 mb-3">
+    <label for="first_name" class="form-label">First Name</label>
+    {{ form.first_name(class="form-control", id="first_name") }}
+  </div>
+  <div class="col-md-6 mb-3">
+    <label for="last_name" class="form-label">Last Name</label>
+    {{ form.last_name(class="form-control", id="last_name") }}
+  </div>
+</div>
 
               <div class="mb-3">
                 <label for="email" class="form-label">Email</label>
