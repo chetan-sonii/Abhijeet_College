@@ -1,21 +1,39 @@
 {# templates/users/courses.html #}
 {% extends "users/base.html" %}
-{% block page_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/users/courses.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/users/theme.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/users/sidebar.css') }}">
-{% endblock %}
 
 {% block user_content %}
-<div class="container py-4">
-  <h2>My Courses</h2>
-  <div id="my-courses-area">
-    <div class="small text-muted">Loading…</div>
-  </div>
-</div>
-{% endblock %}
+<div class="container-fluid p-0">
+    <h2 class="h4 fw-bold mb-4">My Courses</h2>
 
-{% block page_js %}
-<script src="{{ url_for('static', filename='js/users/courses.js') }}"></script>
-<script src="{{ url_for('static', filename='js/users/theme.js') }}"></script>
+    <div class="row g-4">
+        {% for enr in enrollments %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="badge bg-primary bg-opacity-10 text-primary">{{ enr.course.code }}</span>
+                        <small class="text-muted">{{ enr.course.credits }} Credits</small>
+                    </div>
+                    <h5 class="card-title fw-bold mb-2">{{ enr.course.title }}</h5>
+                    <p class="card-text text-muted small mb-3">
+                        {{ enr.course.description[:100] }}...
+                    </p>
+                    <div class="d-flex align-items-center text-muted small">
+                        <i class="bi bi-building me-2"></i>
+                        {{ enr.course.department.name if enr.course.department else 'General' }}
+                    </div>
+                </div>
+                <div class="card-footer bg-white border-top-0 pt-0 pb-3">
+                    <small class="text-muted">Enrolled on: {{ enr.enrolled_on.strftime('%d %b, %Y') }}</small>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12 text-center py-5">
+            <div class="text-muted mb-3"><i class="bi bi-book fs-1"></i></div>
+            <p>You are not enrolled in any courses yet.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
 {% endblock %}

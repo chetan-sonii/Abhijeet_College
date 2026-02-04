@@ -1,85 +1,109 @@
-{# templates/admin/courses.html - merge with your existing courses template #}
+{# templates/admin/courses.html #}
 {% extends "admin/base.html" %}
 
 {% block admin_content %}
 <div class="container-fluid">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Courses</h2>
-    <div><button id="course-create-btn" class="btn btn-primary btn-sm">Add course</button></div>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="h3 fw-bold">Courses & Curriculum</h2>
+      <p class="text-muted small">Manage subjects, credits, and fees.</p>
+    </div>
+    <button class="btn btn-primary" onclick="openCreateModal()">
+      <i class="bi bi-plus-lg"></i> Add New Course
+    </button>
   </div>
 
-  <div class="card">
+  <div class="card shadow-sm border-0">
     <div class="card-body p-0">
-      <table class="table mb-0">
-        <thead><tr><th>ID</th><th>Title</th><th>Code</th><th>Department</th><th>Credits</th><th class="text-end">Actions</th></tr></thead>
-        <tbody id="courses-body">
-          {% for c in courses %}
-          <tr data-cid="{{ c.id }}" data-dept-id="{{ c.department_id or '' }}">
-            <td>{{ c.id }}</td>
-            <td>{{ c.title }}</td>
-            <td>{{ c.code or '—' }}</td>
-            <td>{{ c.department.name if c.department else '—' }}</td>
-            <td>{{ c.credits or '—' }}</td>
-            <td class="text-end">
-              <button class="btn btn-sm btn-outline-primary edit-course" data-id="{{ c.id }}" data-dept-id="{{ c.department_id or '' }}">Edit</button>
-              <button class="btn btn-sm btn-outline-danger delete-course" data-id="{{ c.id }}">Delete</button>
-            </td>
-          </tr>
-          {% else %}
-          <tr><td colspan="6" class="text-center small text-muted">No courses yet</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="courses-table">
+          <thead class="bg-light">
+            <tr>
+              <th class="ps-4">Code</th>
+              <th>Course Title</th>
+              <th>Dept</th>
+              <th>Credits</th>
+              <th>Fee ($)</th>
+              <th class="text-end pe-4">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="courses-body">
+            {% for c in courses %}
+            <tr id="course-row-{{ c.id }}">
+              <td class="ps-4 fw-bold text-primary">{{ c.code }}</td>
+              <td>
+                <div class="fw-bold">{{ c.title }}</div>
+              </td>
+              <td><span class="badge bg-light text-dark border">{{ c.department.name if c.department else 'General' }}</span></td>
+              <td>{{ c.credits }}</td>
+              <td>{{ c.fee }}</td>
+              <td class="text-end pe-4">
+                <button class="btn btn-sm btn-outline-secondary me-1" onclick="editCourse('{{ c.id }}')">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteCourse('{{ c.id }}')">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- modal create/edit -->
-<div class="modal fade" id="courseModal" tabindex="-1">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
+<div class="modal fade" id="courseModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
     <div class="modal-content">
-      <form id="course-form" class="modal-content">
-        <div class="modal-header"><h5 class="modal-title">Course</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <form id="courseForm" onsubmit="saveCourse(event)">
+        <div class="modal-header">
+          <h5 class="modal-title" id="courseModalLabel">Course Details</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
         <div class="modal-body">
-          <input type="hidden" name="id" id="course-id">
-          <div class="mb-3"><label class="form-label">Title</label><input name="title" id="course-title" class="form-control" required></div>
-          <div class="mb-3"><label class="form-label">Code</label><input name="code" id="course-code" class="form-control" required></div>
-          <div class="mb-3"><label class="form-label">Department</label>
-            <select id="course-dept" name="department_id" class="form-select">
-              <option value="">-- none --</option>
+          <input type="hidden" id="c_id"> <div class="row g-2 mb-3">
+            <div class="col-md-4">
+              <label class="form-label">Code</label>
+              <input type="text" name="code" id="c_code" class="form-control" placeholder="CS101" required>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Title</label>
+              <input type="text" name="title" id="c_title" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Department</label>
+            <select name="department_id" id="c_dept" class="form-select">
+              <option value="">-- General --</option>
               {% for d in departments %}
-                <option value="{{ d.id }}">{{ d.name }}</option>
+              <option value="{{ d.id }}">{{ d.name }}</option>
               {% endfor %}
             </select>
           </div>
-          <div class="mb-3"><label class="form-label">Credits</label><input name="credits" id="course-credits" class="form-control" type="number" step="1" min="0"></div>
-          <div class="mb-3"><label class="form-label">Description</label><textarea id="course-desc" name="description" class="form-control" rows="4"></textarea></div>
 
-          <!-- Fee structures for this department -->
-          <hr>
-          <div id="dept-fee-section" style="display:none">
-            <h6>Department fees</h6>
-            <div id="dept-fees-list" class="mb-3 small text-muted">Loading…</div>
-
-            <div class="mb-3">
-              <label class="form-label">Add fee for this department</label>
-              <div class="row g-2">
-                <div class="col-sm-6">
-                  <input id="new-fee-name" class="form-control" placeholder="Fee name (tuition, etc.)">
-                </div>
-                <div class="col-sm-3">
-                  <input id="new-fee-amount" class="form-control" placeholder="Amount" type="number" step="0.01">
-                </div>
-                <div class="col-sm-3">
-                  <button id="add-fee-btn" type="button" class="btn btn-outline-primary w-100">Add fee</button>
-                </div>
-              </div>
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Credits</label>
+              <input type="number" name="credits" id="c_credits" class="form-control" value="3">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Fee</label>
+              <input type="number" name="fee" id="c_fee" class="form-control" value="0" step="0.01">
             </div>
           </div>
-          <!-- end fee section -->
 
+          <div class="mb-3">
+             <label class="form-label">Description</label>
+             <textarea name="description" id="c_desc" class="form-control" rows="2"></textarea>
+          </div>
         </div>
-        <div class="modal-footer"><button type="submit" class="btn btn-primary">Save</button><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
       </form>
     </div>
   </div>

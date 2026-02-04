@@ -1,448 +1,209 @@
 # dbs.py
-"""
-Seed script for the College Management app.
-
-Place at project root and run:
-    python dbs.py
-or to wipe & reseed:
-    python dbs.py --force
-"""
-
+import os
 import random
-import argparse
-from datetime import datetime, timedelta, date
-from decimal import Decimal
+from datetime import datetime, date, timedelta
+from dotenv import load_dotenv
+
+# Load env variables first
+load_dotenv()
+
 from app import create_app
 from app.extensions import db
 from app.models import (
-    User,
-    UserRole,
-    Department,
-    Course,
-
-    Section,
-    StudentProfile,
-    FacultyProfile,
-
-    Enrollment,
-
-    Exam,
-    ExamResult,
-    FeeStructure,
-    Payment,
-
-    Notice,
-    NoticeCategory,  # <--- NEW IMPORT
-    Event, Semester,
-
+    User, UserRole, Department, Course, StudentProfile, Enrollment,
+    Notice, NoticeCategory, Application, Exam, ExamResult, Payment
 )
-from run import app
 
-# ---------- configuration ----------
-NUM_STUDENTS = 12
-NUM_FACULTY = 3
-NUM_COURSES = 6
-
-# ---------- helpers ----------
-def mk_email(name, domain="college.local.com"):
-    name = name.lower().replace(" ", ".")
-    return f"{name}@{domain}"
-
-def random_choice(seq):
-    return random.choice(seq)
-
-def ensure(obj):
-    """Add and commit a single object, return it (useful when relationships need ids)."""
-    db.session.add(obj)
-    db.session.flush()
-    return obj
-
-# ---------- seed functions ----------
-def seed_departments():
-    print("Seeding departments...")
-    depts = [
-        {"code": "CSE", "name": "Computer Science and Engineering"},
-        {"code": "ECE", "name": "Electronics and Communication Engineering"},
-        {"code": "ME", "name": "Mechanical Engineering"},
-    ]
-    created = []
-    for d in depts:
-        existing = Department.query.filter_by(code=d["code"]).first()
-        if existing:
-            created.append(existing)
-            continue
-        obj = Department(code=d["code"], name=d["name"], description=f"{d['name']} department")
-        created.append(ensure(obj))
-    return created
-
-def seed_courses(departments):
-    print("Seeding courses...")
-    sample = [
-        ("CS101", "Intro to Programming", 3, "CSE"),
-        ("CS201", "Data Structures", 4, "CSE"),
-        ("EC101", "Circuit Theory", 3, "ECE"),
-        ("EC201", "Digital Electronics", 3, "ECE"),
-        ("ME101", "Engineering Mechanics", 3, "ME"),
-        ("ME201", "Thermodynamics", 3, "ME"),
-    ]
-    created = []
-    dept_map = {d.code: d for d in departments}
-    for code, title, credits, dcode in sample[:NUM_COURSES]:
-        if Course.query.filter_by(code=code).first():
-            created.append(Course.query.filter_by(code=code).first())
-            continue
-        course = Course(code=code, title=title, credits=credits,
-                        description=f"{title} - course description",
-                        department=dept_map.get(dcode))
-        created.append(ensure(course))
-    return created
-
-def seed_users(departments):
-    print("Seeding users (admin, faculty, students)...")
-    created_admin = None
-
-    # Admin user
-    if not User.query.filter_by(email="admin@college.com").first():
-        admin = User(email="admin@college.com", first_name="Super", last_name="Admin", role=UserRole.ADMIN)
-        admin.set_password("admin123")
-        ensure(admin)
-        created_admin = admin
-    else:
-        created_admin = User.query.filter_by(email="admin@college.local").first()
-
-    # Faculty
-    faculties = []
-    for i in range(1, NUM_FACULTY + 1):
-        email = mk_email(f"faculty{i}")
-        fuser = User.query.filter_by(email=email).first()
-        if fuser:
-            faculties.append(fuser)
-            continue
-        fuser = User(email=email, first_name=f"Faculty{i}", last_name="Member", role=UserRole.FACULTY)
-        fuser.set_password("faculty123")
-        ensure(fuser)
-        faculty_profile = FacultyProfile(user=fuser, employee_id=f"FAC{i:03d}", designation="Assistant Professor",
-                                         bio="Experienced faculty", department=random.choice(departments))
-        ensure(faculty_profile)
-        faculties.append(fuser)
-    # Students
-    students = []
-    for i in range(1, NUM_STUDENTS + 1):
-        email = mk_email(f"student{i}")
-        u = User.query.filter_by(email=email).first()
-        if u:
-            students.append(u)
-            continue
-        u = User(email=email, first_name=f"Student{i}", last_name="Learner", role=UserRole.STUDENT)
-        u.set_password("student123")
-        ensure(u)
-        dept = random.choice(departments)
-        profile = StudentProfile(user=u, admission_no=f"ADM{2025}{i:03d}", roll_no=f"R{1000+i}",
-                                 date_of_birth=date(2003, random.randint(1, 12), random.randint(1, 28)),
-                                 gender=random_choice(["male", "female"]), address="Some address", department=dept, year="1st Year")
-        ensure(profile)
-        students.append(u)
-
-    return created_admin, faculties, students
-
-def seed_sections_and_enrollments(courses, semesters, faculties, students):
-    print("Seeding sections and enrollments...")
-    sections = []
-    enrollments = []
-    semester = semesters[1] if len(semesters) > 1 else semesters[0]  # prefer Spring 2026
-    for course in courses:
-        # create 1-2 sections per course
-        for sfx in ("A",):
-            code = f"{course.code}-{sfx}"
-            sec = Section.query.filter_by(code=code, course_id=course.id, semester_id=semester.id).first()
-            if not sec:
-                sec = Section(code=code, course=course, semester=semester, capacity=40, room=f"Room {random.randint(100,499)}",
-                              schedule="Mon/Wed/Fri 10:00-11:00")
-                ensure(sec)
-                # assign 1 faculty randomly
-                fac_profile = random.choice(faculties).faculty_profile
-                if fac_profile:
-                    sec.instructors.append(fac_profile)
-            sections.append(sec)
-
-            # enroll 4-6 random students
-            candidates = random.sample(students, k=min(6, max(3, len(students)//2)))
-            for u in candidates:
-                student_profile = u.student_profile
-                if not student_profile:
-                    continue
-                existing = Enrollment.query.filter_by(student_id=student_profile.id, section_id=sec.id).first()
-                if existing:
-                    enrollments.append(existing)
-                    continue
-                enr = Enrollment(student=student_profile, section=sec, status="active")
-                ensure(enr)
-                enrollments.append(enr)
-    return sections, enrollments
-
-def seed_exams_and_results(sections, enrollments):
-    print("Seeding exams and results...")
-    for sec in sections:
-        ex = Exam(section=sec, name="Midterm", exam_date=date.today() - timedelta(days=20), total_marks=100)
-        ensure(ex)
-        # create results for enrollments in section
-        section_enrs = Enrollment.query.filter_by(section_id=sec.id).all()
-        for enr in section_enrs:
-            if ExamResult.query.filter_by(exam_id=ex.id, enrollment_id=enr.id).first():
-                continue
-            marks = random.randint(30, 95)
-            res = ExamResult(exam=ex, enrollment=enr, marks_obtained=marks, grade=calc_grade(marks))
-            ensure(res)
-
-def calc_grade(marks):
-    if marks >= 85:
-        return "A"
-    if marks >= 70:
-        return "B"
-    if marks >= 55:
-        return "C"
-    if marks >= 40:
-        return "D"
-    return "F"
-
-def seed_fees_and_payments(students):
-    print("Seeding fee structures and payments...")
-    fs = []
-    # two fee structures
-    tuition = FeeStructure(name="Tuition Fee - 1st Year", amount=Decimal("50000.00"), description="Tuition for first year")
-    lab = FeeStructure(name="Lab Fee", amount=Decimal("5000.00"), description="Lab facility fee")
-    for f in (tuition, lab):
-        if not FeeStructure.query.filter_by(name=f.name).first():
-            ensure(f)
-        else:
-            f = FeeStructure.query.filter_by(name=f.name).first()
-        fs.append(f)
-
-    for u in students:
-        sp = u.student_profile
-        if not sp:
-            continue
-        # create 1-2 payments
-        p1 = Payment(student=sp, fee_structure=fs[0], amount=fs[0].amount, paid_on=datetime.utcnow() - timedelta(days=random.randint(5,30)),
-                     payment_method=random.choice(["card", "upi", "cash"]), transaction_id=f"TXN{random.randint(100000,999999)}",
-                     status="completed")
-        ensure(p1)
-        if random.choice([True, False]):
-            p2 = Payment(student=sp, fee_structure=fs[1], amount=fs[1].amount, paid_on=datetime.utcnow() - timedelta(days=random.randint(1,20)),
-                         payment_method=random.choice(["card","cash"]), transaction_id=f"TXN{random.randint(100000,999999)}", status="completed")
-            ensure(p2)
+app = create_app()
 
 
-def seed_notices_events(admin_user):
-    print("Seeding notices and events with categories...")
-
-    # Data designed to show off the Badge and Pinned features
-    notices_data = [
-        {
-            "title": "Semester Exams - Final Schedule",
-            "body": "The final schedule for the Spring 2026 semester exams is now available. Click here to download the PDF. Exams begin on May 1st.",
-            "category": NoticeCategory.EXAM,
-            "is_pinned": True,  # Will appear first
-            "days_ago": 0
-        },
-        {
-            "title": "Campus Recruitment Drive: Google & Amazon",
-            "body": "Top tech companies are visiting campus on Feb 15th. All final year students must update their resumes in the placement portal by Friday.",
-            "category": NoticeCategory.PLACEMENT,
-            "is_pinned": True, # Will appear second
-            "days_ago": 1
-        },
-        {
-            "title": "Annual TechFest 'Innovate' Registration",
-            "body": "Registration for the annual tech fest is now open. Events include Hackathon, RoboWars, and Coding Sprint. Visit the auditorium for details.",
-            "category": NoticeCategory.EVENT,
-            "is_pinned": False,
-            "days_ago": 2
-        },
-        {
-            "title": "Scholarship Applications Open",
-            "body": "State merit scholarship applications are now open for the academic year 2026-27. Eligible students should submit forms to the admin office.",
-            "category": NoticeCategory.ACADEMIC,
-            "is_pinned": False,
-            "days_ago": 5
-        },
-        {
-            "title": "Library Maintenance Schedule",
-            "body": "The central library will remain closed for maintenance on Sunday, 25th Jan. Digital access will remain available.",
-            "category": NoticeCategory.GENERAL,
-            "is_pinned": False,
-            "days_ago": 7
-        },
-        {
-            "title": "Blood Donation Camp",
-            "body": "NSS is organizing a blood donation camp in the main hallway this Saturday. Volunteers are welcome.",
-            "category": NoticeCategory.EVENT,
-            "is_pinned": False,
-            "days_ago": 10
-        }
-    ]
-
-    for data in notices_data:
-        if not Notice.query.filter_by(title=data["title"]).first():
-            n = Notice(
-                title=data["title"],
-                body=data["body"],
-                category=data["category"],
-                is_pinned=data["is_pinned"],
-                posted_by=admin_user,
-                posted_on=datetime.utcnow() - timedelta(days=data["days_ago"])
-            )
-            ensure(n)
-
-    # Process events
-    events_data = [
-        {
-            "title": "Freshers Orientation",
-            "description": "Orientation for new students",
-            "start": datetime.utcnow() + timedelta(days=7),
-            "end": datetime.utcnow() + timedelta(days=7, hours=3),
-            "location": "Main Auditorium"
-        }
-    ]
-
-    for data in events_data:
-        if not Event.query.filter_by(title=data["title"]).first():
-            e = Event(
-                title=data["title"],
-                description=data["description"],
-                start_datetime=data["start"],
-                end_datetime=data["end"],
-                location=data["location"],
-                created_by=admin_user
-            )
-            ensure(e)
-
-
-# ---------- orchestrator ----------
-def seed_all(force=False):
-    app = create_app()
+def seed_data():
     with app.app_context():
-        if force:
-            print("Force flag detected — dropping and recreating all tables...")
-            db.drop_all()
-            db.create_all()
-        else:
-            # if there is already data, skip by default
-            if User.query.first():
-                print("Database already contains data. Use --force to wipe and reseed.")
-                return
+        print("🗑️  Cleaning database...")
+        db.drop_all()
+        db.create_all()
+        print("✅ Database Reset.")
 
-        departments = seed_departments()
-        courses = seed_courses(departments)
+        # ------------------------------------------------
+        # 1. Create Departments & Courses
+        # ------------------------------------------------
+        print("🏛️  Creating Departments & Courses...")
 
-        admin_user, faculties, students = seed_users(departments)
+        depts_data = [
+            ("CSE", "Computer Science", "Software, AI, and Systems"),
+            ("BBA", "Business Admin", "Management, Finance, and Marketing"),
+            ("ME", "Mechanical Eng", "Robotics and Mechanics"),
+        ]
 
-        db.session.commit()  # commit so that subsequent relationships have ids
+        departments = {}
+        for code, name, desc in depts_data:
+            d = Department(code=code, name=name, description=desc)
+            db.session.add(d)
+            departments[code] = d
 
+        db.session.commit()  # Commit to get IDs
 
+        courses_data = [
+            # CSE
+            ("CS101", "Intro to Python", 4, 150.00, "CSE"),
+            ("CS201", "Data Structures", 4, 150.00, "CSE"),
+            ("CS305", "Web Development", 3, 120.00, "CSE"),
+            # BBA
+            ("MKT101", "Digital Marketing", 3, 100.00, "BBA"),
+            ("FIN202", "Corporate Finance", 4, 140.00, "BBA"),
+            # ME
+            ("ME101", "Thermodynamics", 4, 160.00, "ME"),
+        ]
 
-        seed_fees_and_payments(students)
+        all_courses = []
+        for code, title, credits, fee, dept_code in courses_data:
+            c = Course(
+                code=code,
+                title=title,
+                credits=credits,
+                fee=fee,
+                department_id=departments[dept_code].id,
+                description=f"Comprehensive course on {title}."
+            )
+            db.session.add(c)
+            all_courses.append(c)
 
-        seed_notices_events(admin_user)
-        seed_sections()
-
-
-        # final commit
         db.session.commit()
-        print("Seeding complete.")
 
+        # ------------------------------------------------
+        # 2. Create Specific Admin (from .env)
+        # ------------------------------------------------
+        admin_email = os.getenv("ADMIN_EMAIL", "admin@college.edu")
+        admin_pass = os.getenv("ADMIN_PASSWORD", "admin123")
 
-def seed_sections():
-    with app.app_context():
-        print("🌱 Seeding Sections and Dependencies...")
+        admin = User(
+            email=admin_email,
+            first_name="Super",
+            last_name="Admin",
+            role=UserRole.ADMIN,
+            is_admin=True,
+            is_active=True
+        )
+        admin.set_password(admin_pass)
+        db.session.add(admin)
+        print(f"👤 Admin created: {admin_email}")
 
-        # 1. Ensure a Department exists
-        dept = Department.query.filter_by(code="CSE").first()
-        if not dept:
-            dept = Department(code="CSE", name="Computer Science Engineering")
-            db.session.add(dept)
-            db.session.commit()
-            print("   -> Created Department: CSE")
+        # ------------------------------------------------
+        # 3. Create Specific Student (from .env)
+        # ------------------------------------------------
+        student_email = os.getenv("STUDENT_EMAIL", "student@college.edu")
+        student_pass = os.getenv("STUDENT_PASSWORD", "student123")
 
-        # 2. Ensure a Semester exists
-        semester = Semester.query.filter_by(name="Fall 2025").first()
-        if not semester:
-            semester = Semester(
-                name="Fall 2025",
-                start_date=date(2025, 8, 1),
-                end_date=date(2025, 12, 15),
-                is_active=True
+        student_user = User(
+            email=student_email,
+            first_name="Rahul",
+            last_name="Sharma",
+            phone="9876543210",
+            role=UserRole.STUDENT,
+            is_admin=False,
+            is_active=True
+        )
+        student_user.set_password(student_pass)
+        db.session.add(student_user)
+        db.session.commit()  # Commit user to get ID
+
+        # Create Profile
+        student_profile = StudentProfile(
+            user_id=student_user.id,
+            admission_no="ADM2026001",
+            date_of_birth=date(2004, 5, 15),
+            gender="Male",
+            address="123, College Road, Delhi",
+            department_id=departments["CSE"].id,
+            year="2nd Year"
+        )
+        db.session.add(student_profile)
+        db.session.commit()
+        print(f"🎓 Student created: {student_email}")
+
+        # ------------------------------------------------
+        # 4. Enroll Student & Add Payments
+        # ------------------------------------------------
+        # Enroll in CS101 and CS305
+        enrolled_courses = [c for c in all_courses if c.code in ["CS101", "CS305"]]
+
+        enrollments = []
+        for course in enrolled_courses:
+            enr = Enrollment(
+                student_id=student_profile.id,
+                course_id=course.id
             )
-            db.session.add(semester)
-            db.session.commit()
-            print("   -> Created Semester: Fall 2025")
+            db.session.add(enr)
+            enrollments.append(enr)
 
-        # 3. Ensure a Course exists
-        course = Course.query.filter_by(code="CS101").first()
-        if not course:
-            course = Course(
-                code="CS101",
-                title="Intro to Programming",
-                credits=4,
-                department_id=dept.id
+        # Add a dummy payment
+        payment = Payment(
+            student_id=student_profile.id,
+            amount=500.00,
+            status="completed"
+        )
+        db.session.add(payment)
+
+        db.session.commit()
+
+        # ------------------------------------------------
+        # 5. Create Exams & Results
+        # ------------------------------------------------
+        # Create an exam for CS101
+        cs101 = next(c for c in all_courses if c.code == "CS101")
+        exam = Exam(
+            course_id=cs101.id,
+            name="Mid-Term Assessment",
+            exam_date=date.today() + timedelta(days=5),
+            total_marks=50
+        )
+        db.session.add(exam)
+        db.session.commit()
+
+        # Give the student a result for this exam
+        result = ExamResult(
+            exam_id=exam.id,
+            enrollment_id=enrollments[0].id,  # CS101 enrollment
+            marks_obtained=42.5,
+            grade="A",
+            remarks="Excellent work"
+        )
+        db.session.add(result)
+
+        # ------------------------------------------------
+        # 6. Notices & Applications
+        # ------------------------------------------------
+        notices = [
+            (
+            "Welcome Class of 2026", "We are excited to start the new academic session.", NoticeCategory.GENERAL, True),
+            ("Mid-Term Dates", "Mid-term exams for CSE start next week.", NoticeCategory.EXAM, False),
+            ("Holiday Announcement", "College remains closed on Friday.", NoticeCategory.GENERAL, False),
+        ]
+
+        for title, body, cat, pinned in notices:
+            n = Notice(
+                title=title, body=body, category=cat,
+                is_pinned=pinned, posted_by_id=admin.id
             )
-            db.session.add(course)
-            db.session.commit()
-            print("   -> Created Course: CS101")
+            db.session.add(n)
 
-        # 4. Ensure a Faculty member exists (to assign as instructor)
-        # First, check for the User
-        faculty_user = User.query.filter_by(email="prof@college.edu").first()
-        if not faculty_user:
-            faculty_user = User(
-                email="prof@college.edu",
-                first_name="Alan",
-                last_name="Turing",
-                role=UserRole.FACULTY,
-                is_active=True
+        # Pending Applications (Fake users)
+        apps = [
+            ("Amit Verma", "amit@example.com", "CSE", "I love coding."),
+            ("Sneha Gupta", "sneha@example.com", "BBA", "Interested in management."),
+        ]
+
+        for name, email, dept_code, msg in apps:
+            prog = next(c for c in all_courses if c.department.code == dept_code)
+            a = Application(
+                name=name, email=email, program_id=prog.id,
+                message=msg, status="new"
             )
-            faculty_user.set_password("password123")
-            db.session.add(faculty_user)
-            db.session.commit()
+            db.session.add(a)
 
-        # Second, check for the Profile
-        faculty_profile = FacultyProfile.query.filter_by(user_id=faculty_user.id).first()
-        if not faculty_profile:
-            faculty_profile = FacultyProfile(
-                user_id=faculty_user.id,
-                employee_id="FAC-001",
-                designation="Senior Professor",
-                department_id=dept.id
-            )
-            db.session.add(faculty_profile)
-            db.session.commit()
-            print("   -> Created Faculty: Alan Turing")
+        db.session.commit()
+        print("✨ Seeding Complete! System ready.")
 
-        # 5. Create the Section
-        section_code = "CS101-A"
-        section = Section.query.filter_by(code=section_code).first()
 
-        if not section:
-            section = Section(
-                code=section_code,
-                course_id=course.id,
-                semester_id=semester.id,
-                capacity=60,
-                room="Room 304",
-                schedule="Mon/Wed 10:00 AM - 11:30 AM"
-            )
-
-            # Add relationship: Assign the faculty to this section
-            section.instructors.append(faculty_profile)
-
-            db.session.add(section)
-            db.session.commit()
-            print(f"   ✅ Created Section: {section.code} (Course: {course.title})")
-        else:
-            print(f"   ℹ️  Section {section_code} already exists.")
-# ---------- CLI ----------
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Seed the database with mock college data.")
-    parser.add_argument("--force", action="store_true", help="Drop all tables and recreate before seeding.")
-    args = parser.parse_args()
-    seed_all(force=args.force)
+    seed_data()

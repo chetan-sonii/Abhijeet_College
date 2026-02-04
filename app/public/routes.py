@@ -1,7 +1,7 @@
 # app/public/routes.py
 from flask import Blueprint, render_template, jsonify, request, current_app, url_for,redirect,flash
 from datetime import datetime
-from app.models import Notice, Course, StudentProfile, FacultyProfile, Department, Application, ContactMessage
+from app.models import Notice, Course, StudentProfile, Department, Application, ContactMessage
 from app.extensions import db
 
 public_bp = Blueprint("public", __name__, template_folder="../../templates/public", static_folder="../../static")
@@ -45,17 +45,7 @@ def index():
         courses = []
 
     # Fetch a small list of faculty for server-render fallback
-    try:
-        faculties = (
-            FacultyProfile.query
-            .join(FacultyProfile.user.property.mapper.class_)  # ensures relationship available
-            .order_by(FacultyProfile.id)
-            .limit(8)
-            .all()
-        )
-    except Exception:
-        current_app.logger.exception("Failed to fetch faculties")
-        faculties = []
+
 
     hero = {
         "title": current_app.config.get("HERO_TITLE", "Welcome to Our College"),
@@ -72,42 +62,10 @@ def index():
         notices=notices,
         departments=departments,
         courses=courses,
-        faculties=faculties,
+
     )
 
 
-@public_bp.route("/api/staff")
-def api_staff():
-    """
-    Returns faculty list.
-    Optional query param:
-      - department (int): department id to filter
-    """
-    dept = request.args.get("department")
-    q = FacultyProfile.query.join(FacultyProfile.user)
-    if dept and dept.isdigit():
-        q = q.filter(FacultyProfile.department_id == int(dept))
-    q = q.order_by(FacultyProfile.id).limit(50)
-
-    try:
-        results = []
-        for f in q:
-            user = f.user
-            name = (user.first_name or "") + (" " + (user.last_name or "") if user.last_name else "")
-            name = name.strip() or (user.email.split("@")[0] if getattr(user, "email", None) else "Faculty")
-            results.append({
-                "id": f.id,
-                "name": name,
-                "designation": f.designation or "",
-                "department": (f.department.name if getattr(f, "department", None) else ""),
-                "bio": (f.bio or "")[:400],
-                # if you later add photo URLs to FacultyProfile, return them here; fallback to picsum
-                "image": getattr(f, "photo_url", None) or f"https://i.pravatar.cc/300?u=faculty-{f.id}"
-            })
-        return jsonify({"status": "ok", "staff": results})
-    except Exception:
-        current_app.logger.exception("Failed to fetch staff")
-        return jsonify({"status": "error", "staff": []}), 500
 
 
 @public_bp.route("/api/notices")
@@ -264,10 +222,7 @@ def about():
         students_count = StudentProfile.query.count()
     except Exception:
         students_count = 0
-    try:
-        faculty_count = FacultyProfile.query.count()
-    except Exception:
-        faculty_count = 0
+
 
     # Simple leadership sample (server fallback). Replace with real data when you have it.
     leadership = [
@@ -289,7 +244,7 @@ def about():
     facts = {
         "courses": courses_count,
         "students": students_count,
-        "faculty": faculty_count,
+
     }
 
     return render_template(

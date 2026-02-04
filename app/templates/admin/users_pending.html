@@ -51,22 +51,6 @@
         </table>
       </div>
     </div>
-
-    {% if pagination.pages > 1 %}
-    <div class="card-footer bg-white">
-      <nav>
-        <ul class="pagination justify-content-center mb-0">
-          {% if pagination.has_prev %}
-          <li class="page-item"><a class="page-link" href="{{ url_for('admin.users_pending', page=pagination.prev_num) }}">Previous</a></li>
-          {% endif %}
-          <li class="page-item disabled"><span class="page-link">Page {{ pagination.page }} of {{ pagination.pages }}</span></li>
-          {% if pagination.has_next %}
-          <li class="page-item"><a class="page-link" href="{{ url_for('admin.users_pending', page=pagination.next_num) }}">Next</a></li>
-          {% endif %}
-        </ul>
-      </nav>
-    </div>
-    {% endif %}
   </div>
 </div>
 
@@ -79,20 +63,25 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <p>You are approving <strong id="modalUserName"></strong>.</p>
+          <p>You are about to approve <strong id="modalUserName" class="text-primary"></strong>.</p>
 
-          <div class="mb-3">
-            <label for="sectionSelect" class="form-label">Enroll in Class (Optional)</label>
-            <select name="section_id" id="sectionSelect" class="form-select">
-              <option value="">-- Do not enroll (Just Approve) --</option>
-              {% for sec in sections %}
-              <option value="{{ sec.id }}">
-                {{ sec.course.code }} {{ sec.course.title }} ({{ sec.code }})
-              </option>
-              {% endfor %}
-            </select>
-            <div class="form-text small">If selected, a Student Profile will be created automatically.</div>
+          <div class="alert alert-light border">
+            <div class="mb-3">
+  <label for="courseSelect" class="form-label fw-bold">Enroll in Course (Optional)</label>
+  <select name="course_id" id="courseSelect" class="form-select">
+    <option value="">-- Do not enroll (Just Approve) --</option>
+    {% for c in courses %}
+    <option value="{{ c.id }}">
+      {{ c.code }} - {{ c.title }}
+    </option>
+    {% endfor %}
+  </select>
+  <div class="form-text small text-muted">
+    Selecting a course will create a student profile and enrollment record.
+  </div>
+</div>
           </div>
+
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -105,14 +94,10 @@
 
 <script>
 function openApproveModal(userId, userName) {
-    // Set the form action dynamically
     const form = document.getElementById('approveForm');
     form.action = `/admin/users/${userId}/approve`;
-
-    // Set the user name text
     document.getElementById('modalUserName').textContent = userName;
-
-    // Show Modal
+    document.getElementById('courseSelect').value = ""; // Reset dropdown
     new bootstrap.Modal(document.getElementById('approveModal')).show();
 }
 </script>

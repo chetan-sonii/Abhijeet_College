@@ -1,21 +1,95 @@
 {# templates/users/exams.html #}
 {% extends "users/base.html" %}
-{% block page_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/users/exams.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/users/theme.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/users/sidebar.css') }}">
-{% endblock %}
 
 {% block user_content %}
-<div class="container py-4">
-  <h2>My Exams</h2>
-  <div id="my-exams-area">
-    <div class="small text-muted">Loading…</div>
-  </div>
-</div>
-{% endblock %}
+<div class="container-fluid p-0">
+    <h2 class="h4 fw-bold mb-4">Exams & Results</h2>
 
-{% block page_js %}
-<script src="{{ url_for('static', filename='js/users/exams.js') }}"></script>
-<script src="{{ url_for('static', filename='js/users/theme.js') }}"></script>
+    <ul class="nav nav-tabs mb-4 border-bottom-0" id="examTabs">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#upcoming">Upcoming Exams</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#results">Results History</button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="upcoming">
+            <div class="card border-0 shadow-sm">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4">Date</th>
+                                <th>Exam Name</th>
+                                <th>Subject</th>
+                                <th>Total Marks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ex in upcoming %}
+                            <tr>
+                                <td class="ps-4 text-nowrap">{{ ex.exam_date.strftime('%a, %d %b %Y') }}</td>
+                                <td class="fw-bold text-primary">{{ ex.name }}</td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">{{ ex.course.code }}</span>
+                                    {{ ex.course.title }}
+                                </td>
+                                <td>{{ ex.total_marks }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center py-5 text-muted">No upcoming exams.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="results">
+            <div class="card border-0 shadow-sm">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4">Exam</th>
+                                <th>Subject</th>
+                                <th>Marks Obtained</th>
+                                <th>Grade</th>
+                                <th>Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in results %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-bold">{{ r.exam.name }}</div>
+                                    <small class="text-muted">{{ r.exam.exam_date.strftime('%d %b %Y') if r.exam.exam_date else '-' }}</small>
+                                </td>
+                                <td>{{ r.exam.course.title }}</td>
+                                <td>
+                                    {% if r.score is not none %}
+                                        <strong>{{ r.score }}</strong> <span class="text-muted">/ {{ r.exam.total_marks }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if r.score is not none %}
+                                        <span class="badge bg-success">{{ r.grade or 'N/A' }}</span>
+                                    {% else %} - {% endif %}
+                                </td>
+                                <td class="small text-muted">{{ r.remarks }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5" class="text-center py-5 text-muted">No results found.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

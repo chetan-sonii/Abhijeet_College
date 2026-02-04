@@ -1,51 +1,163 @@
-{# templates/admin/students.html - merge with existing file #}
+{# templates/admin/students.html #}
 {% extends "admin/base.html" %}
+
+{% block title %}Student Management{% endblock %}
 
 {% block admin_content %}
 <div class="container-fluid">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Students</h2>
-    <div class="d-flex gap-2">
-      <a href="{{ url_for('admin.students_page') }}" class="btn btn-sm btn-outline-secondary {% if not fee_filter %}active{% endif %}">All</a>
-      <a href="{{ url_for('admin.students_page', fee_paid='yes') }}" class="btn btn-sm btn-outline-secondary {% if fee_filter == 'yes' %}active{% endif %}">Fee paid</a>
-      <a href="{{ url_for('admin.students_page', fee_paid='no') }}" class="btn btn-sm btn-outline-secondary {% if fee_filter == 'no' %}active{% endif %}">Fee pending</a>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="h3 fw-bold">Students Directory</h2>
+      <p class="text-muted small">Manage profiles, enrollments, and fee status.</p>
     </div>
   </div>
 
-  <div class="card">
+  <div class="card shadow-sm mb-4 border-0">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <input type="text" id="filter-search" class="form-control" placeholder="Search by Name, Email, or Admission No...">
+        </div>
+        <div class="col-md-3">
+          <select id="filter-course" class="form-select">
+            <option value="">All Courses</option>
+            {% for c in courses %}
+            <option value="{{ c.id }}">{{ c.code }} - {{ c.title }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <select id="filter-fee" class="form-select">
+            <option value="">All Fee Status</option>
+            <option value="paid">Fully Paid</option>
+            <option value="pending">Pending Dues</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <button id="btn-filter" class="btn btn-primary w-100">Filter</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0">
     <div class="card-body p-0">
-      <table class="table mb-0">
-        <thead><tr><th>ID</th><th>Name</th><th>Department</th><th>Class</th><th>Fee paid</th><th class="text-end">Actions</th></tr></thead>
-        <tbody>
-          {% for s in students %}
-          <tr>
-            <td>{{ s.id }}</td>
-            <td>{{ s.name }}</td>
-            <td>{{ s.profile.department.name if s.profile and s.profile.department else '—' }}</td>
-            <td>{{ s.class }}</td>
-            <td>{% if s.paid %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-warning text-dark">No</span>{% endif %}</td>
-            <td class="text-end">
-              <button class="btn btn-sm btn-outline-primary view-student" data-id="{{ s.id }}">View</button>
-            </td>
-          </tr>
-          {% else %}
-          <tr><td colspan="6" class="text-center small text-muted">No students found</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="bg-light">
+            <tr>
+              <th class="ps-4">Admission No</th>
+              <th>Student Name</th>
+              <th>Courses</th>
+              <th>Fee Status</th>
+              <th>Status</th>
+              <th class="text-end pe-4">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="students-body">
+            <tr><td colspan="6" class="text-center py-5 text-muted">Loading students...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Student view modal -->
-<div class="modal fade" id="studentViewModal" tabindex="-1">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
+<div class="modal fade" id="studentModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
-      <div class="modal-header"><h5 class="modal-title">Student details</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
-      <div class="modal-body" id="student-modal-body">
-        <div class="text-center small text-muted">Loading…</div>
+      <div class="modal-header">
+        <h5 class="modal-title">Student Profile</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
+      <div class="modal-body">
+        <div class="d-flex align-items-center mb-4">
+    <div class="me-3">
+        <img id="modal-avatar" src="" alt="Avatar" class="rounded-circle border" width="80" height="80" style="object-fit: cover;">
+    </div>
+
+    <div class="flex-grow-1">
+        <h4 id="modal-name" class="mb-1 fw-bold">Student Name</h4>
+        <div class="text-muted small">
+            <span id="modal-adm">ADM123</span> • <span id="modal-email">email@example.com</span>
+        </div>
+        <div class="mt-2">
+            <span id="modal-status-badge" class="badge bg-success">Active</span>
+        </div>
+    </div>
+    <div>
+         <button id="btn-block-user" class="btn btn-outline-danger btn-sm">Block User</button>
+    </div>
+</div>
+
+        <ul class="nav nav-tabs mb-3" id="studentTabs" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-academics">Academics</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-fees">Fees & Payments</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-info">Personal Info</button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="tab-academics">
+                <table class="table table-sm table-bordered">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Course</th>
+                            <th>Enrolled On</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modal-enrollments"></tbody>
+                </table>
+            </div>
+
+            <div class="tab-pane fade" id="tab-fees">
+                <div class="row mb-3">
+                    <div class="col-4 border-end text-center">
+                        <small class="text-muted">Total Fees</small>
+                        <h5 class="text-dark" id="modal-fee-total">$0.00</h5>
+                    </div>
+                    <div class="col-4 border-end text-center">
+                        <small class="text-muted">Paid</small>
+                        <h5 class="text-success" id="modal-fee-paid">$0.00</h5>
+                    </div>
+                    <div class="col-4 text-center">
+                        <small class="text-muted">Balance Due</small>
+                        <h5 class="text-danger" id="modal-fee-balance">$0.00</h5>
+                    </div>
+                </div>
+                <h6 class="small text-muted text-uppercase">Payment History</h6>
+                <ul class="list-group list-group-flush small" id="modal-payments">
+                    </ul>
+            </div>
+
+            <div class="tab-pane fade" id="tab-info">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="small text-muted">Phone</label>
+                        <div id="modal-phone" class="fw-bold">-</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="small text-muted">Date of Birth</label>
+                        <div id="modal-dob" class="fw-bold">-</div>
+                    </div>
+                    <div class="col-12">
+                        <label class="small text-muted">Address</label>
+                        <div id="modal-addr" class="fw-bold">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
     </div>
   </div>
 </div>

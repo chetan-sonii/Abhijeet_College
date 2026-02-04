@@ -2,12 +2,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify
 from flask_login import login_required, current_user
 from app.models import (
-    Application, Course, User, ContactMessage, StudentProfile, FacultyProfile,
-    Department, Notice, Payment, Exam, ExamResult, Section, Enrollment, FeeStructure, NoticeCategory
+    Application, Course, User, ContactMessage, StudentProfile,
+    Department, Notice, Payment, Exam, ExamResult, Enrollment, NoticeCategory
 )
 from app.extensions import db
 from sqlalchemy import func, or_
-from sqlalchemy.exc import IntegrityError
 from datetime import datetime
 from sqlalchemy.orm import joinedload
 
@@ -37,7 +36,7 @@ def dashboard():
             "total_users": db.session.query(func.count(User.id)).scalar() or 0,
             "courses": db.session.query(func.count(Course.id)).scalar() or 0,
             "students": db.session.query(func.count(StudentProfile.id)).scalar() or 0,
-            "faculty": db.session.query(func.count(FacultyProfile.id)).scalar() or 0,
+
         }
     except Exception:
         stats = {k: 0 for k in
@@ -201,99 +200,122 @@ def api_delete_app(item_id):
     return jsonify({"status": "ok"})
 
 
-# ... Include the rest of your Exam, Student, Notice routes here ...
+# --------------------------
+# PENDING USERS (AJAX)
+# --------------------------
+@admin_bp.route("/api/users/<int:user_id>/reject", methods=["POST"])
+@login_required
+def api_reject_user(user_id):
+    if not current_user.is_admin:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 403
 
-# --------------------
-# Courses management (list + create/edit via modal)
-# NOTE: Course model has 'credits' not 'fees'. Use credits here.
-# --------------------
+    try:
+        user = User.query.get_or_404(user_id)
+        email = user.email
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({"status": "success", "message": f"User {email} rejected", "id": user_id})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# --------------------------
+# COURSES MANAGEMENT (AJAX)
+# --------------------------
 @admin_bp.route("/courses")
 @login_required
 def courses_page():
-    if not current_user.is_admin:
-        return admin_guard()
-    courses = Course.query.order_by(Course.title).all()
-    departments = Department.query.order_by(Department.name).all()
+    if not current_user.is_admin: return admin_guard()
+    courses = Course.query.options(joinedload(Course.department)).order_by(Course.code).all()
+    departments = Department.query.all()
     return render_template("admin/courses.html", courses=courses, departments=departments)
 
 
-@admin_bp.route("/api/courses/create", methods=["POST"])
+@admin_bp.route("/api/courses", methods=["POST"])
 @login_required
 def api_course_create():
-    if not current_user.is_admin:
-        return jsonify({"status":"error"}), 403
-    data = request.get_json() or {}
-    title = data.get("title", "").strip()
-    code = data.get("code", "").strip()
-    dept_id = data.get("department_id")
-    credits = data.get("credits")
-    description = data.get("description")
-    if not title:
-        return jsonify({"status":"error","message":"title_required"}),400
-    if not code:
-        return jsonify({"status":"error","message":"code_required"}),400
+    if not current_user.is_admin: return jsonify({"error": "Auth required"}), 403
+
+    data = request.form
     try:
-        course = Course(
-            title=title,
-            code=code,
-            department_id=int(dept_id) if dept_id else None,
-            credits=int(credits) if credits is not None and credits != "" else Course.credits.property.columns[0].default.arg,
-            description=description
+        c = Course(
+            code=data.get("code").upper(),
+            title=data.get("title"),
+            credits=int(data.get("credits", 3)),
+            fee=float(data.get("fee", 0.0)),
+            department_id=data.get("department_id") or None,
+            description=data.get("description")
         )
-        db.session.add(course)
-        db.session.commit()
-        return jsonify({"status":"ok","id":course.id,"title":course.title})
-    except IntegrityError as ie:
-        db.session.rollback()
-        current_app.logger.exception("course create integrity error")
-        return jsonify({"status":"error","message":"duplicate_code_or_constraint"}), 400
-    except Exception:
-        db.session.rollback()
-        current_app.logger.exception("course create failed")
-        return jsonify({"status":"error","message":"server_error"}), 500
-
-
-@admin_bp.route("/api/courses/<int:cid>/update", methods=["POST"])
-@login_required
-def api_course_update(cid):
-    if not current_user.is_admin:
-        return jsonify({"status":"error"}), 403
-    c = Course.query.get_or_404(cid)
-    data = request.get_json() or {}
-    c.title = data.get("title", c.title)
-    c.code = data.get("code", c.code)
-    dept_id = data.get("department_id")
-    c.department_id = int(dept_id) if dept_id else c.department_id
-    if "credits" in data:
-        try:
-            c.credits = int(data.get("credits"))
-        except (TypeError, ValueError):
-            pass
-    c.description = data.get("description", c.description)
-    try:
         db.session.add(c)
         db.session.commit()
-        return jsonify({"status":"ok","id":c.id})
-    except IntegrityError:
-        db.session.rollback()
-        return jsonify({"status":"error","message":"duplicate_code_or_constraint"}), 400
-    except Exception:
-        db.session.rollback()
-        current_app.logger.exception("course update failed")
-        return jsonify({"status":"error","message":"server_error"}), 500
+
+        # Return the new row data for the frontend
+        return jsonify({
+            "status": "success",
+            "course": {
+                "id": c.id,
+                "code": c.code,
+                "title": c.title,
+                "credits": c.credits,
+                "fee": c.fee,
+                "dept_name": c.department.name if c.department else "—"
+            }
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
 
 
-@admin_bp.route("/api/courses/<int:cid>/delete", methods=["POST"])
+@admin_bp.route("/api/courses/<int:course_id>", methods=["GET", "POST", "DELETE"])
 @login_required
-def api_course_delete(cid):
-    if not current_user.is_admin:
-        return jsonify({"status":"error"}), 403
-    c = Course.query.get_or_404(cid)
-    db.session.delete(c)
-    db.session.commit()
-    return jsonify({"status":"ok","deleted":True})
+def api_course_manage(course_id):
+    if not current_user.is_admin: return jsonify({"error": "Auth required"}), 403
 
+    c = Course.query.get_or_404(course_id)
 
+    # GET details
+    if request.method == "GET":
+        return jsonify({
+            "status": "success",
+            "data": {
+                "id": c.id, "code": c.code, "title": c.title,
+                "credits": c.credits, "fee": c.fee,
+                "department_id": c.department_id, "description": c.description
+            }
+        })
+
+    # UPDATE details
+    if request.method == "POST":
+        data = request.form
+        try:
+            c.code = data.get("code").upper()
+            c.title = data.get("title")
+            c.credits = int(data.get("credits", 3))
+            c.fee = float(data.get("fee", 0.0))
+            c.department_id = data.get("department_id") or None
+            c.description = data.get("description")
+            db.session.commit()
+
+            return jsonify({
+                "status": "success",
+                "course": {
+                    "id": c.id, "code": c.code, "title": c.title,
+                    "credits": c.credits, "fee": c.fee,
+                    "dept_name": c.department.name if c.department else "—"
+                }
+            })
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
+
+    # DELETE
+    if request.method == "DELETE":
+        try:
+            db.session.delete(c)
+            db.session.commit()
+            return jsonify({"status": "success", "id": course_id})
+        except Exception as e:
+            return jsonify(
+                {"status": "error", "message": "Cannot delete course. It may have active sections or results."}), 400
 # --------------------
 # Notices management
 # --------------------
@@ -397,36 +419,189 @@ def api_notice_delete(nid):
     db.session.commit()
     return jsonify({"status": "ok", "deleted": True})
 
-
-# --------------------
-# Students page (safe fee detection using Payment.student_id only)
-# --------------------
 @admin_bp.route("/students")
 @login_required
 def students_page():
-    if not current_user.is_admin:
-        return admin_guard()
-    q = StudentProfile.query.order_by(StudentProfile.id.desc())
-    fee_filter = request.args.get("fee_paid")
-    students = q.all()
-    out = []
+    if not current_user.is_admin: return admin_guard()
+    # Pass courses for the filter dropdown
+    courses = Course.query.order_by(Course.title).all()
+    return render_template("admin/students.html", courses=courses)
+
+
+@admin_bp.route("/api/students")
+@login_required
+def api_students_list():
+    """
+    AJAX Endpoint for filtering and listing students.
+    """
+    if not current_user.is_admin: return jsonify({"status": "error"}), 403
+
+    # Filters
+    search_q = request.args.get("q", "").strip()
+    course_id = request.args.get("course_id")
+    fee_status = request.args.get("fee_status")  # 'paid', 'pending'
+
+    # Base Query
+    query = StudentProfile.query.join(User).options(
+        joinedload(StudentProfile.user),
+        joinedload(StudentProfile.enrollments).joinedload(Enrollment.course),
+        joinedload(StudentProfile.payments)
+    )
+
+    # Apply Search (Name, Email, Admission No)
+    if search_q:
+        term = f"%{search_q}%"
+        query = query.filter(
+            (User.first_name.ilike(term)) |
+            (User.last_name.ilike(term)) |
+            (User.email.ilike(term)) |
+            (StudentProfile.admission_no.ilike(term))
+        )
+
+    # Apply Course Filter
+    if course_id:
+        query = query.join(Enrollment).filter(Enrollment.course_id == course_id)
+
+    # Fetch all (for fee filtering in Python - easier for complex logic)
+    students = query.all()
+
+    data = []
     for s in students:
-        paid = False
-        try:
-            paid_amount = db.session.query(func.coalesce(func.sum(Payment.amount), 0)).filter(Payment.student_id == s.id).scalar() or 0
-            paid = float(paid_amount) > 0
-        except Exception:
-            paid = False
-        out.append({
+        # Calculate Fees
+        total_fee = sum(e.course.fee for e in s.enrollments)
+        total_paid = sum(p.amount for p in s.payments)
+        balance = float(total_fee) - float(total_paid)
+
+        is_paid = balance <= 0
+
+        # Apply Fee Filter
+        if fee_status == "paid" and not is_paid: continue
+        if fee_status == "pending" and is_paid: continue
+
+        data.append({
             "id": s.id,
-            "name": getattr(s, "full_name", None) or getattr(s, "name", None) or s.email or "",
-            "class": getattr(s, "year", None) or "",
-            "paid": paid,
-            "profile": s
+            "admission_no": s.admission_no,
+            "name": s.user.full_name(),
+            "email": s.user.email,
+            "courses_count": len(s.enrollments),
+            "fee_status": "Paid" if is_paid else f"Due: ${balance:.2f}",
+            "is_paid": is_paid,
+            "is_active": s.user.is_active
         })
-    if fee_filter in ("yes","no"):
-        out = [r for r in out if (r["paid"] and fee_filter == "yes") or (not r["paid"] and fee_filter == "no")]
-    return render_template("admin/students.html", students=out, fee_filter=fee_filter)
+
+    return jsonify({"status": "success", "students": data})
+
+
+admin_bp.route("/api/students/<int:student_id>")
+
+@admin_bp.route("/api/students/<int:student_id>")
+@login_required
+def api_student_detail(student_id):
+    if not current_user.is_admin: return jsonify({"status": "error"}), 403
+
+    s = StudentProfile.query.get_or_404(student_id)
+
+    # 1. Academics
+    enrollments_data = []
+    total_fee = 0.0
+    for e in s.enrollments:
+        fee = float(e.course.fee)
+        total_fee += fee
+        enrollments_data.append({
+            "id": e.id,
+            "course_title": e.course.title,
+            "course_code": e.course.code,
+            "fee": fee,
+            "enrolled_on": e.enrolled_on.strftime("%Y-%m-%d")
+        })
+
+    # 2. Payments
+    payments_data = []
+    total_paid = 0.0
+    for p in s.payments:
+        amt = float(p.amount)
+        total_paid += amt
+        payments_data.append({
+            "id": p.id,
+            "amount": amt,
+            "date": p.paid_on.strftime("%Y-%m-%d"),
+            "status": p.status
+        })
+
+    # 3. FIX: Logic for Balance vs Credit
+    raw_balance = total_fee - total_paid
+
+    if raw_balance > 0:
+        balance_due = raw_balance
+        credit = 0.0
+        status_label = "Pending"
+    else:
+        balance_due = 0.0
+        credit = abs(raw_balance)  # This is the "Extra" paid
+        status_label = "Settled" if credit == 0 else "Overpaid"
+
+    return jsonify({
+        "status": "success",
+        "profile": {
+            "id": s.id,
+            "user_id": s.user.id,
+            "avatar": s.user.avatar_url,  # SEND AVATAR URL
+            "name": s.user.full_name(),
+            "email": s.user.email,
+            "phone": s.user.phone,
+            "admission_no": s.admission_no,
+            "dob": s.date_of_birth.strftime("%Y-%m-%d") if s.date_of_birth else "-",
+            "address": s.address,
+            "is_active": s.user.is_active,
+            "joined": s.created_at.strftime("%Y-%m-%d")
+        },
+        "academics": enrollments_data,
+        "finance": {
+            "total_fee": total_fee,
+            "total_paid": total_paid,
+            "balance_due": balance_due,  # Now strictly >= 0
+            "credit": credit,  # Positive if overpaid
+            "status": status_label,
+            "history": payments_data
+        }
+    })
+
+
+@admin_bp.route("/api/students/<int:student_id>/action", methods=["POST"])
+@login_required
+def api_student_action(student_id):
+    """
+    Handle actions: Block User, Unenroll from Course
+    """
+    if not current_user.is_admin: return jsonify({"status": "error"}), 403
+
+    action = request.form.get("action")
+    s = StudentProfile.query.get_or_404(student_id)
+
+    try:
+        if action == "block":
+            s.user.is_active = False
+            msg = "Student blocked successfully."
+        elif action == "unblock":
+            s.user.is_active = True
+            msg = "Student unblocked successfully."
+        elif action == "unenroll":
+            enrollment_id = request.form.get("enrollment_id")
+            enr = Enrollment.query.get(enrollment_id)
+            if enr and enr.student_id == s.id:
+                db.session.delete(enr)
+                msg = "Student unenrolled from course."
+            else:
+                return jsonify({"status": "error", "message": "Invalid enrollment"}), 400
+        else:
+            return jsonify({"status": "error", "message": "Unknown action"}), 400
+
+        db.session.commit()
+        return jsonify({"status": "success", "message": msg})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 # --------------------
@@ -461,15 +636,76 @@ def application_delete(app_id):
     return redirect(url_for("admin.apps_page"))
 
 
-# app/admin/routes.py (Partial Update)
 
-from app.models import (
-    # ... existing imports ...
-    Semester
-)
+admin_bp.route("/users/pending")
 
 
-# ... existing routes ...
+
+
+
+@admin_bp.route("/users/<int:user_id>/approve", methods=["POST"])
+@login_required
+def users_approve(user_id):
+    if not current_user.is_admin: return redirect(url_for("auth.login"))
+
+    user = User.query.get_or_404(user_id)
+    course_id = request.form.get("course_id")  # Changed form field name
+
+    try:
+        user.is_active = True
+
+        if course_id and course_id.strip():
+            course = Course.query.get(int(course_id))
+            if course:
+                # 1. Create Profile
+                if not user.student_profile:
+                    adm_no = f"ADM{datetime.now().year}{user.id:04d}"
+                    profile = StudentProfile(
+                        user_id=user.id,
+                        email=user.email,
+                        admission_no=adm_no,
+                        first_name=user.first_name,
+                        last_name=user.last_name,
+                    )
+                    db.session.add(profile)
+                    db.session.flush()
+                else:
+                    profile = user.student_profile
+
+                # 2. Create Enrollment (Direct to Course)
+                existing = Enrollment.query.filter_by(student_id=profile.id, course_id=course.id).first()
+                if not existing:
+                    enrollment = Enrollment(student_id=profile.id, course_id=course.id)
+                    db.session.add(enrollment)
+                    flash(f"Approved and enrolled in {course.title}.", "success")
+                else:
+                    flash("Approved (already enrolled).", "info")
+            else:
+                flash("Approved, but invalid course selected.", "warning")
+        else:
+            flash(f"User {user.email} approved (no enrollment).", "success")
+
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        flash("Error processing approval.", "danger")
+
+    return redirect(url_for("admin.users_pending"))
+
+
+@admin_bp.route("/users/<int:user_id>/reject", methods=["POST"])
+@login_required
+def users_reject(user_id):
+    if not current_user.is_admin: return admin_guard()
+
+    user = User.query.get_or_404(user_id)
+    email = user.email
+    db.session.delete(user)
+    db.session.commit()
+
+    flash(f"User {email} has been rejected and removed.", "info")
+    return redirect(url_for("admin.users_pending"))
+
 
 @admin_bp.route("/users/pending")
 @login_required
@@ -477,521 +713,165 @@ def users_pending():
     if not current_user.is_admin: return admin_guard()
 
     page = request.args.get("page", 1, type=int)
-
-    # Fetch Pending Users
     q = User.query.filter(User.is_active == False).order_by(User.requested_at.desc())
     pagination = q.paginate(page=page, per_page=20, error_out=False)
 
-    # Fetch Active Sections for the Dropdown
-    # We only show sections from active semesters to keep the list clean
-    active_semesters = Semester.query.filter_by(is_active=True).with_entities(Semester.id).all()
-    active_sem_ids = [s[0] for s in active_semesters]
-
-    if active_sem_ids:
-        sections = Section.query.filter(Section.semester_id.in_(active_sem_ids)) \
-            .options(joinedload(Section.course)) \
-            .order_by(Section.code).all()
-    else:
-        # Fallback if no active semester defined
-        sections = Section.query.options(joinedload(Section.course)).limit(50).all()
+    # Fetch Courses for the enrollment dropdown
+    courses = Course.query.order_by(Course.code).all()
 
     return render_template(
         "admin/users_pending.html",
         users=pagination.items,
         pagination=pagination,
-        sections=sections
+        courses=courses  # Updated variable name
     )
 
 
-@admin_bp.route("/users/<int:user_id>/approve", methods=["POST"])
-@login_required
-def users_approve(user_id):
-    if not current_user.is_admin: return admin_guard()
-
-    user = User.query.get_or_404(user_id)
-    section_id = request.form.get("section_id")
-
-    try:
-        # 1. Activate User
-        user.is_active = True
-
-        # 2. Handle Enrollment if a Section is selected
-        if section_id and section_id.strip():
-            section = Section.query.get(int(section_id))
-            if section:
-                # A. Ensure Student Profile Exists
-                if not user.student_profile:
-                    # Generate a simple Admission Number: ADM + Year + UserID
-                    adm_no = f"ADM{datetime.now().year}{user.id:04d}"
-
-                    profile = StudentProfile(
-                        user_id=user.id,
-                        email=user.email,
-                        admission_no=adm_no,
-                        first_name=user.first_name,
-                        last_name=user.last_name,
-                        department_id=section.course.department_id if section.course else None
-                    )
-                    db.session.add(profile)
-                    db.session.flush()  # Get ID before enrollment
-                else:
-                    profile = user.student_profile
-
-                # B. Create Enrollment
-                # Check if already enrolled to prevent duplicates
-                existing_enrollment = Enrollment.query.filter_by(
-                    student_id=profile.id,
-                    section_id=section.id
-                ).first()
-
-                if not existing_enrollment:
-                    enrollment = Enrollment(
-                        student_id=profile.id,
-                        section_id=section.id
-                    )
-                    db.session.add(enrollment)
-                    flash(f"User approved and enrolled in {section.course.title} ({section.code})", "success")
-                else:
-                    flash("User approved (already enrolled in this section).", "info")
-            else:
-                flash("User approved, but invalid section selected.", "warning")
-        else:
-            flash(f"User {user.email} approved (no enrollment).", "success")
-
-        db.session.commit()
-
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Approval error: {e}")
-        flash("Error approving user.", "danger")
-
-    return redirect(url_for("admin.users_pending"))
-
-@admin_bp.route("/users/<int:user_id>/reject", methods=["POST"])
-@login_required
-def users_reject(user_id):
-    if not current_user.is_admin:
-        return admin_guard()
-    u = User.query.get_or_404(user_id)
-    db.session.delete(u)
-    db.session.commit()
-    flash(f"User { u.email} rejected and removed.", "info")
-    return redirect(url_for("admin.users_pending"))
-
-
+# --------------------------
+# EXAMS MANAGEMENT
+# --------------------------
 @admin_bp.route("/exams")
 @login_required
 def exams_page():
-    if not current_user.is_admin:
-        return admin_guard()
+    if not current_user.is_admin: return admin_guard()
 
-    # Eager-load section -> course to avoid N+1 and make Jinja rendering reliable
-    exams = (
-        db.session.query(Exam)
-        .options(joinedload(Exam.section).joinedload(Section.course))
-        .order_by(Exam.exam_date.desc())
-        .all()
-    )
-
-    # sections and departments for the create/edit modal select boxes
-    sections = Section.query.order_by(Section.code).all()
+    # Fetch all courses for the 'Create Exam' dropdown
+    courses = Course.query.order_by(Course.title).all()
     departments = Department.query.order_by(Department.name).all()
-    return render_template(
-        "admin/exams.html",
-        exams=exams,
-        sections=sections,
-        department=departments,
-    )
+
+    return render_template("admin/exams.html", courses=courses, departments=departments)
 
 
-
-@admin_bp.route("/api/exams", methods=["GET"])
+@admin_bp.route("/api/exams")
 @login_required
 def api_exams_list():
-    if not current_user.is_admin:
-        return jsonify({"status":"error","message":"admin_required"}), 403
-    rows = Exam.query.order_by(Exam.exam_date.desc()).all()
-    out = []
-    for e in rows:
-        out.append({
+    """List exams with optional filtering"""
+    if not current_user.is_admin: return jsonify({"status": "error"}), 403
+
+    # Filters
+    q = request.args.get("q", "").strip()
+    dept_id = request.args.get("department_id")
+
+    query = Exam.query.join(Course).options(joinedload(Exam.course))
+
+    if dept_id:
+        query = query.filter(Course.department_id == dept_id)
+
+    if q:
+        term = f"%{q}%"
+        query = query.filter(Exam.name.ilike(term) | Course.title.ilike(term))
+
+    exams = query.order_by(Exam.exam_date.desc()).all()
+
+    data = []
+    for e in exams:
+        data.append({
             "id": e.id,
             "title": e.name,
-            "section": e.section.code if getattr(e, "section", None) else None,
-            "course": e.section.course.title if getattr(e, "section", None) and getattr(e.section, "course", None) else None,
-            "exam_date": e.exam_date.isoformat() if e.exam_date else None,
+            "course_title": e.course.title,
+            "course_code": e.course.code,
+            "date": e.exam_date.strftime("%Y-%m-%d") if e.exam_date else "-",
             "total_marks": e.total_marks
         })
 
-    return jsonify({"status":"ok","exams":out})
+    return jsonify({"status": "success", "exams": data})
 
 
 @admin_bp.route("/api/exams/create", methods=["POST"])
 @login_required
-def api_exams_create():
-    if not current_user.is_admin:
-        return jsonify({"status":"error"}), 403
-    data = request.get_json() or {}
-    title = data.get("title","").strip()
-    section_id = data.get("section_id")
-    exam_date = data.get("exam_date")
-    total_marks = data.get("total_marks") or None
-    if not title or not section_id:
-        return jsonify({"status":"error","message":"title_and_section_required"}), 400
-    e = Exam(name=title, section_id=int(section_id), exam_date=exam_date or None, total_marks=float(total_marks) if total_marks not in (None, "") else None)
-    db.session.add(e)
-    db.session.commit()
-    return jsonify({"status":"ok","id":e.id})
+def api_exam_create():
+    if not current_user.is_admin: return jsonify({"status": "error"}), 403
 
-
-@admin_bp.route("/api/exams/<int:eid>/delete", methods=["POST"])
-@login_required
-def api_exams_delete(eid):
-    if not current_user.is_admin:
-        return jsonify({"status":"error"}), 403
-    e = Exam.query.get_or_404(eid)
-    db.session.delete(e)
-    db.session.commit()
-    return jsonify({"status":"ok","deleted":True})
-
-
-@admin_bp.route("/api/exams/<int:eid>/results")
-@login_required
-def api_exams_results(eid):
-    if not current_user.is_admin:
-        return jsonify({"status":"error"}), 403
-    exam = Exam.query.get_or_404(eid)
-    # get enrollments for the section and any existing results
-    enrolls = Enrollment.query.filter(Enrollment.section_id == exam.section_id).all()
-    # build response rows
-    rows = []
-    for en in enrolls:
-        # try to find result
-        res = ExamResult.query.filter_by(exam_id=eid, enrollment_id=en.id).first()
-        rows.append({
-            "enrollment_id": en.id,
-            "student_name": getattr(en.student, "full_name", None) or getattr(en.student, "name", None) or "",
-            "student_id": en.student_id,
-            "marks_obtained": res.marks_obtained if res else None,
-            "grade": res.grade if res else None,
-            "result_id": res.id if res else None
-        })
-    return jsonify({"status":"ok","rows":rows, "exam": {"id": exam.id, "title": exam.name, "total_marks": exam.total_marks}})
-
-
-@admin_bp.route("/api/exams/<int:eid>/results/save", methods=["POST"])
-@login_required
-def api_exams_results_save(eid):
-    if not current_user.is_admin:
-        return jsonify({"status":"error"}), 403
-    payload = request.get_json() or {}
-    # payload expected: [{"enrollment_id":..,"marks_obtained":..,"grade":.., "result_id":..}, ...]
-    rows = payload.get("rows", [])
-    saved = []
-    for r in rows:
-        enrollment_id = int(r.get("enrollment_id"))
-        res_id = r.get("result_id")
-        marks = r.get("marks_obtained")
-        grade = r.get("grade")
-        if res_id:
-            res = ExamResult.query.get(int(res_id))
-            if res:
-                res.marks_obtained = float(marks) if marks not in (None,"") else None
-                res.grade = grade
-                db.session.add(res)
-                saved.append(res.id)
-        else:
-            new = ExamResult(exam_id=eid, enrollment_id=enrollment_id, marks_obtained=float(marks) if marks not in (None,"") else None, grade=grade)
-            db.session.add(new)
-            db.session.flush()
-            saved.append(new.id)
-    db.session.commit()
-    return jsonify({"status":"ok","saved": saved})
-
-# ---------- FeeStructure APIs (list/create/delete) ----------
-@admin_bp.route("/api/fee_structures", methods=["GET", "POST"])
-@login_required
-def api_fee_structures():
-    if not current_user.is_admin:
-        return jsonify({"status":"error","message":"admin_required"}), 403
-
-    if request.method == "GET":
-        # optional filter: department_id
-        dept_id = request.args.get("department_id")
-        q = FeeStructure.query.order_by(FeeStructure.created_at.desc())
-        if dept_id:
-            q = q.filter(FeeStructure.applicable_to_department_id == int(dept_id))
-        rows = q.all()
-        out = [{"id": r.id, "name": r.name, "amount": str(r.amount), "description": r.description, "department_id": r.applicable_to_department_id} for r in rows]
-        return jsonify({"status":"ok","fee_structures": out})
-
-    # POST -> create
-    data = request.get_json() or {}
-    name = (data.get("name") or "").strip()
-    amount = data.get("amount")
-    description = data.get("description")
-    dept_id = data.get("department_id") or None
-    if not name or amount is None:
-        return jsonify({"status":"error","message":"name_and_amount_required"}), 400
+    data = request.get_json()
     try:
-        fs = FeeStructure(name=name, amount=amount, description=description, applicable_to_department_id=int(dept_id) if dept_id else None)
-        db.session.add(fs)
-        db.session.commit()
-        return jsonify({"status":"ok","id": fs.id, "name": fs.name, "amount": str(fs.amount)})
-    except Exception:
-        db.session.rollback()
-        current_app.logger.exception("fee structure create failed")
-        return jsonify({"status":"error","message":"server_error"}), 500
-
-# add to app/admin/routes.py (merge with exams routes)
-@admin_bp.route("/api/exams/<int:eid>/update", methods=["POST"])
-@login_required
-def api_exams_update(eid):
-    """Update an existing exam (admin only)."""
-    if not current_user.is_admin:
-        return jsonify({"status":"error","message":"admin_required"}), 403
-
-    exam = Exam.query.get_or_404(eid)
-    data = request.get_json() or {}
-
-    title = (data.get("title") or "").strip()
-    section_id = data.get("section_id")
-    exam_date = data.get("exam_date")
-    total_marks = data.get("total_marks")
-
-    if title:
-        exam.title = title
-    if section_id is not None and section_id != "":
-        try:
-            exam.section_id = int(section_id)
-        except Exception:
-            pass
-    # accept empty exam_date as clear
-    exam.exam_date = exam_date if exam_date not in (None, "") else None
-    if total_marks not in (None, ""):
-        try:
-            exam.total_marks = float(total_marks)
-        except Exception:
-            pass
-
-    try:
+        exam = Exam(
+            name=data.get("title"),
+            course_id=int(data.get("course_id")),
+            exam_date=datetime.strptime(data.get("date"), "%Y-%m-%d").date() if data.get("date") else None,
+            total_marks=int(data.get("total_marks") or 100)
+        )
         db.session.add(exam)
         db.session.commit()
-        return jsonify({"status":"ok","id": exam.id})
-    except Exception:
-        db.session.rollback()
-        current_app.logger.exception("api_exams_update failed")
-        return jsonify({"status":"error","message":"server_error"}), 500
-
-@admin_bp.route("/api/fee_structures/<int:fid>/delete", methods=["POST"])
-@login_required
-def api_fee_structure_delete(fid):
-    if not current_user.is_admin:
-        return jsonify({"status":"error","message":"admin_required"}), 403
-    fs = FeeStructure.query.get_or_404(fid)
-    db.session.delete(fs)
-    db.session.commit()
-    return jsonify({"status":"ok","deleted":True})
-
-
-# ---------- Student detail API for modal ----------
-@admin_bp.route("/api/students/<int:sid>")
-@login_required
-def api_student_detail(sid):
-    if not current_user.is_admin:
-        return jsonify({"status":"error","message":"admin_required"}), 403
-    s = StudentProfile.query.get_or_404(sid)
-
-    # basic profile
-    profile = {
-        "id": s.id,
-        "full_name": getattr(s, "full_name", None) or getattr(s, "name", None) or "",
-        "email": s.email or "",
-        "phone": getattr(s, "phone", None) or "",
-        "department": s.department.name if getattr(s, "department", None) else None,
-        "year": getattr(s, "year", None) or getattr(s, "class_name", None) or "",
-        "registration_no": getattr(s, "registration_no", None) or ""
-    }
-
-    # enrollments (section info)
-    enrolls = []
-    for en in s.enrollments:
-        enrolls.append({
-            "enrollment_id": en.id,
-            "section_id": en.section_id,
-            "section_code": en.section.code if getattr(en, "section", None) else None,
-            "course_title": en.section.course.title if getattr(en, "section", None) and getattr(en.section, "course", None) else None,
-            "semester": en.section.semester.name if getattr(en, "section", None) and getattr(en.section, "semester", None) else None,
-            "status": en.status
-        })
-
-    # payments summary
-    payments = []
-    total_paid = 0
-    for p in Payment.query.filter(Payment.student_id == s.id).order_by(Payment.created_at.desc()).all():
-        payments.append({"id": p.id, "amount": float(p.amount), "method": p.method if hasattr(p, "method") else None, "tx": getattr(p, "transaction_id", None), "created_at": p.created_at.isoformat() if p.created_at else None})
-        try:
-            total_paid += float(p.amount)
-        except Exception:
-            pass
-
-    # fees applicable (department-level FeeStructures)
-    fee_structs = []
-    if s.department:
-        fs_rows = FeeStructure.query.filter(FeeStructure.applicable_to_department_id == s.department.id).all()
-        for fs in fs_rows:
-            fee_structs.append({"id": fs.id, "name": fs.name, "amount": str(fs.amount), "description": fs.description})
-
-    return jsonify({"status":"ok", "profile": profile, "enrollments": enrolls, "payments": payments, "total_paid": total_paid, "fee_structures": fee_structs})
-
-
-# ---------- Exams filtering: update api_exams_list to accept filters ----------
-@admin_bp.route("/api/exams", methods=["GET"])
-@login_required
-def api_exams():
-    if not current_user.is_admin:
-        return jsonify({"status": "error", "message": "admin_required"}), 403
-
-    # filters
-    department_id = request.args.get("department_id")
-    q = request.args.get("q", "").strip()
-    date_from = request.args.get("date_from")
-    date_to = request.args.get("date_to")
-
-    # join Exam -> Section -> Course to get course title reliably
-    query = (
-        db.session.query(Exam, Section, Course)
-        .join(Section, Exam.section_id == Section.id)
-        .join(Course, Section.course_id == Course.id)
-    )
-
-    if department_id:
-        try:
-            query = query.filter(Course.department_id == int(department_id))
-        except Exception:
-            pass
-
-    if q:
-        like = f"%{q}%"
-        query = query.filter(
-            or_(
-                Exam.name.ilike(like),
-                Course.title.ilike(like),
-                Section.code.ilike(like),
-            )
-        )
-
-    if date_from:
-        try:
-            query = query.filter(Exam.exam_date >= date_from)
-        except Exception:
-            pass
-
-    if date_to:
-        try:
-            query = query.filter(Exam.exam_date <= date_to)
-        except Exception:
-            pass
-
-    rows = query.order_by(Exam.exam_date.desc()).all()
-
-    exams = []
-    for exam, section, course in rows:
-        exams.append(
-            {
-                "id": exam.id,
-                # use exam.name (ORM field) but call JSON key "title" for frontend consistency
-                "title": exam.name,
-                "exam_date": exam.exam_date.isoformat() if exam.exam_date else None,
-                "total_marks": exam.total_marks,
-                "section_id": section.id,
-                "section_code": section.code,
-                "course_title": course.title,
-            }
-        )
-    current_app.logger.debug(exams)
-    return jsonify({"status": "ok", "exams": exams})
+        return jsonify({"status": "success", "message": "Exam created"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
 
 
 @admin_bp.route("/api/exams/<int:exam_id>/results", methods=["GET"])
+@login_required
 def api_exam_results(exam_id):
-    """
-    Fetch all students enrolled in the exam's section,
-    joined with their existing results (if any).
-    """
+    """Fetch students for marks entry"""
+    if not current_user.is_admin: return jsonify({"status": "error"}), 403
+
     exam = Exam.query.get_or_404(exam_id)
-    section = exam.section
 
-    if not section:
-        return jsonify({"error": "No section attached to this exam"}), 400
+    # 1. Find all students enrolled in this Course
+    enrollments = Enrollment.query.filter_by(course_id=exam.course_id).options(joinedload(Enrollment.student)).all()
 
-    # 1. Get all students enrolled in this section
-    enrollments = Enrollment.query.filter_by(section_id=section.id).all()
-
-    data = []
+    results_data = []
     for enr in enrollments:
-        # 2. Check if a result already exists for this exam + enrollment
-        result = ExamResult.query.filter_by(exam_id=exam.id, enrollment_id=enr.id).first()
+        # 2. Check if mark already exists
+        res = ExamResult.query.filter_by(exam_id=exam.id, enrollment_id=enr.id).first()
 
-        student_name = enr.student.user.full_name() if enr.student and enr.student.user else "Unknown"
-        admission_no = enr.student.admission_no if enr.student else "N/A"
+        # Get student user details
+        student_user = enr.student.user
 
-        data.append({
+        results_data.append({
             "enrollment_id": enr.id,
-            "student_name": student_name,
-            "admission_no": admission_no,
-            "marks_obtained": result.marks_obtained if result else "",
-            "remarks": result.remarks if result else ""
+            "admission_no": enr.student.admission_no,
+            "student_name": student_user.full_name(),
+            "marks_obtained": res.marks_obtained if res else "",
+            "remarks": res.remarks if res else ""
         })
 
     return jsonify({
-        "exam_title": exam.name,
-        "total_marks": exam.total_marks,
-        "results": data
+        "status": "success",
+        "exam": {"title": exam.name, "total_marks": exam.total_marks},
+        "students": results_data
     })
 
 
 @admin_bp.route("/api/exams/<int:exam_id>/results", methods=["POST"])
+@login_required
 def api_exam_results_save(exam_id):
-    """
-    Save or update marks for the students.
-    """
-    exam = Exam.query.get_or_404(exam_id)
-    data = request.get_json()
+    """Save marks in bulk"""
+    if not current_user.is_admin: return jsonify({"status": "error"}), 403
 
-    if not data or "results" not in data:
-        return jsonify({"message": "Invalid data"}), 400
+    data = request.get_json()
+    rows = data.get("rows", [])
 
     try:
-        for row in data["results"]:
+        for row in rows:
             enrollment_id = row.get("enrollment_id")
-            marks_str = str(row.get("marks_obtained", "")).strip()
+            marks = row.get("marks")
 
-            # Skip invalid enrollment IDs
-            if not enrollment_id:
-                continue
+            if not enrollment_id: continue
 
-            # Find existing result or create new one
-            result = ExamResult.query.filter_by(exam_id=exam.id, enrollment_id=enrollment_id).first()
+            # Find or Create Result
+            res = ExamResult.query.filter_by(exam_id=exam_id, enrollment_id=enrollment_id).first()
+            if not res:
+                res = ExamResult(exam_id=exam_id, enrollment_id=enrollment_id)
+                db.session.add(res)
 
-            if not result:
-                result = ExamResult(exam_id=exam.id, enrollment_id=enrollment_id)
-                db.session.add(result)
-
-            # Handle Marks (convert to float or None)
-            if marks_str == "":
-                result.marks_obtained = None
+            # Update values
+            if marks == "" or marks is None:
+                res.marks_obtained = None
             else:
-                try:
-                    result.marks_obtained = float(marks_str)
-                except ValueError:
-                    continue  # Skip bad data
+                res.marks_obtained = float(marks)
 
-            # Optional: Remarks
-            result.remarks = row.get("remarks", "")
+            res.remarks = row.get("remarks", "")
 
         db.session.commit()
-        return jsonify({"message": "Results saved successfully", "status": "success"})
-
+        return jsonify({"status": "success", "message": "Results saved"})
     except Exception as e:
         db.session.rollback()
-        return jsonify({"message": str(e), "status": "error"}), 500
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@admin_bp.route("/api/exams/<int:exam_id>/delete", methods=["POST"])
+@login_required
+def api_exam_delete(exam_id):
+    if not current_user.is_admin: return jsonify({"status": "error"}), 403
+    db.session.delete(Exam.query.get_or_404(exam_id))
+    db.session.commit()
+    return jsonify({"status": "success"})

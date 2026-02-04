@@ -2,68 +2,74 @@
 {% extends "base.html" %}
 
 {% block page_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/users/theme.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/users/sidebar.css') }}">
+<style>
+    :root { --sidebar-width: 260px; }
+    body { background-color: #f4f6f9; }
 
+    .user-sidebar {
+        width: var(--sidebar-width);
+        position: fixed; top: 0; bottom: 0; left: 0;
+        background: #fff; border-right: 1px solid #eee;
+        z-index: 1000; padding-top: 1.5rem;
+    }
+    .user-main { margin-left: var(--sidebar-width); padding: 2rem; }
+
+    .nav-link {
+        color: #555; font-weight: 500; padding: 0.8rem 1.5rem;
+        border-radius: 0 50px 50px 0; margin-right: 1rem;
+    }
+    .nav-link:hover { color: #4361ee; background: #f0f4ff; }
+    .nav-link.active { color: #4361ee; background: #eef2ff; font-weight: 600; border-left: 4px solid #4361ee; }
+    .nav-link i { width: 24px; text-align: center; margin-right: 10px; }
+
+    @media (max-width: 991px) {
+        .user-sidebar { transform: translateX(-100%); transition: 0.3s; }
+        .user-sidebar.show { transform: translateX(0); box-shadow: 5px 0 15px rgba(0,0,0,0.1); }
+        .user-main { margin-left: 0; }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-  <div class="row">
-
-    <!-- Sidebar -->
-    <aside class="col-md-3 col-lg-2 d-md-block bg-white border-end min-vh-100 px-0">
-      <div class="p-3">
-        <h6 class="text-uppercase text-muted mb-3">Student Panel</h6>
-
-        <ul class="nav nav-pills flex-column gap-1">
-
-          <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'users.dashboard' %}active{% endif %}"
-               href="{{ url_for('users.dashboard') }}">
-              <span class="emoji">🏠</span> Dashboard
-            </a>
-          </li>
-
-          <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'users.my_courses' %}active{% endif %}"
-               href="{{ url_for('users.my_courses') }}">
-              <span class="emoji">📚</span> My Courses
-            </a>
-          </li>
-
-          <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'users.my_exams' %}active{% endif %}"
-               href="{{ url_for('users.my_exams') }}">
-              <span class="emoji">📝</span> Exams & Results
-            </a>
-          </li>
-
-          <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'users.my_fees' %}active{% endif %}"
-               href="{{ url_for('users.my_fees') }}">
-              <span class="emoji">💳</span> Fees & Payments
-            </a>
-          </li>
-
-          <hr class="my-3">
-
-          <li class="nav-item">
-            <a class="nav-link text-danger" href="{{ url_for('auth.logout') }}">
-              <span class="emoji">🚪</span> Logout
-            </a>
-          </li>
-
-        </ul>
-      </div>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="col-md-9 col-lg-10 px-md-4 py-4 user-main">
-      {% block user_content %}{% endblock %}
-    </main>
-
-  </div>
+<div class="d-lg-none p-3 bg-white border-bottom d-flex align-items-center justify-content-between">
+    <span class="fw-bold">Student Panel</span>
+    <button class="btn btn-light" type="button" data-bs-toggle="offcanvas" data-bs-target="#userSidebar">
+        <i class="bi bi-list fs-4"></i>
+    </button>
 </div>
-{% endblock %}
 
+<div class="offcanvas-lg offcanvas-start user-sidebar" id="userSidebar">
+    <div class="px-4 mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <img src="{{ current_user.avatar_url }}" class="rounded-circle" width="48" height="48" style="object-fit:cover;">
+            <div style="line-height:1.2;">
+                <div class="fw-bold text-dark">{{ current_user.first_name }}</div>
+                <small class="text-muted">{{ current_user.student_profile.admission_no if current_user.student_profile else 'Student' }}</small>
+            </div>
+        </div>
+    </div>
+
+    <nav class="nav flex-column">
+        <a class="nav-link {% if request.endpoint == 'users.dashboard' %}active{% endif %}" href="{{ url_for('users.dashboard') }}">
+            <i class="bi bi-grid"></i> Dashboard
+        </a>
+        <a class="nav-link {% if request.endpoint == 'users.my_courses' %}active{% endif %}" href="{{ url_for('users.my_courses') }}">
+            <i class="bi bi-book"></i> My Courses
+        </a>
+        <a class="nav-link {% if request.endpoint == 'users.my_exams' %}active{% endif %}" href="{{ url_for('users.my_exams') }}">
+            <i class="bi bi-pencil-square"></i> Exams & Results
+        </a>
+        <a class="nav-link {% if request.endpoint == 'users.my_fees' %}active{% endif %}" href="{{ url_for('users.my_fees') }}">
+            <i class="bi bi-credit-card"></i> Fees
+        </a>
+        <div class="mt-4 px-4 text-muted small text-uppercase">Account</div>
+        <a class="nav-link text-danger" href="{{ url_for('auth.logout') }}">
+            <i class="bi bi-box-arrow-right"></i> Logout
+        </a>
+    </nav>
+</div>
+
+<main class="user-main">
+    {% block user_content %}{% endblock %}
+</main>
+{% endblock %}
