@@ -1,11 +1,11 @@
-{# templates/admin/users_pending.html #}
+{# templates/admin/enrollment_pending.html #}
 {% extends "admin/base.html" %}
 
 {% block title %}Pending Approvals{% endblock %}
 
 {% block admin_content %}
 <div class="container-fluid">
-  <h2 class="mb-4">Pending User Approvals</h2>
+  <h2 class="mb-4">Pending EnrollMent Approvals</h2>
 
   <div class="card shadow-sm">
     <div class="card-body p-0">
@@ -45,7 +45,7 @@
               </td>
             </tr>
             {% else %}
-            <tr><td colspan="4" class="text-center py-5 text-muted">No pending users found.</td></tr>
+            <tr><td colspan="4" class="text-center py-5 text-muted">No Pending Enrollments found.</td></tr>
             {% endfor %}
           </tbody>
         </table>

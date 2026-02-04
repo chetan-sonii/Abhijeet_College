@@ -53,7 +53,7 @@ def dashboard():
 
 
 # --------------------
-# PENDING USERS
+# Pending Enrollments
 # --------------------
 
 #
@@ -66,7 +66,7 @@ def dashboard():
 #     u.is_active = True
 #     db.session.commit()
 #     flash(f"User {u.email} approved.", "success")
-#     return redirect(url_for("admin.users_pending"))
+#     return redirect(url_for("admin.enrollment_pending"))
 #
 #
 # @admin_bp.route("/users/<int:user_id>/reject", methods=["POST"])
@@ -77,7 +77,7 @@ def dashboard():
 #     db.session.delete(u)
 #     db.session.commit()
 #     flash(f"User {u.email} rejected.", "info")
-#     return redirect(url_for("admin.users_pending"))
+#     return redirect(url_for("admin.enrollment_pending"))
 
 
 # --------------------
@@ -201,7 +201,7 @@ def api_delete_app(item_id):
 
 
 # --------------------------
-# PENDING USERS (AJAX)
+# Pending Enrollments (AJAX)
 # --------------------------
 @admin_bp.route("/api/users/<int:user_id>/reject", methods=["POST"])
 @login_required
@@ -690,7 +690,7 @@ def users_approve(user_id):
         db.session.rollback()
         flash("Error processing approval.", "danger")
 
-    return redirect(url_for("admin.users_pending"))
+    return redirect(url_for("admin.enrollment_pending"))
 
 
 @admin_bp.route("/users/<int:user_id>/reject", methods=["POST"])
@@ -704,12 +704,12 @@ def users_reject(user_id):
     db.session.commit()
 
     flash(f"User {email} has been rejected and removed.", "info")
-    return redirect(url_for("admin.users_pending"))
+    return redirect(url_for("admin.enrollment_pending"))
 
 
 @admin_bp.route("/users/pending")
 @login_required
-def users_pending():
+def enrollment_pending():
     if not current_user.is_admin: return admin_guard()
 
     page = request.args.get("page", 1, type=int)
@@ -720,7 +720,7 @@ def users_pending():
     courses = Course.query.order_by(Course.code).all()
 
     return render_template(
-        "admin/users_pending.html",
+        "admin/enrollment_pending.html",
         users=pagination.items,
         pagination=pagination,
         courses=courses  # Updated variable name

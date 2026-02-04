@@ -2,7 +2,9 @@
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
-from app.models import StudentProfile, Enrollment, Exam, ExamResult, Payment, Notice
+
+from app.extensions import db
+from app.models import StudentProfile, Enrollment, Exam, ExamResult, Payment, Notice, Course
 from datetime import date
 from sqlalchemy import func
 
@@ -58,10 +60,44 @@ def dashboard():
 @users_bp.route("/courses")
 @login_required
 def my_courses():
-    profile = get_student_profile()
+    profile = current_user.student_profile
     if not profile: return redirect(url_for("users.dashboard"))
 
-    return render_template("users/courses.html", enrollments=profile.enrollments)
+    # 1. Get IDs of courses user is already enrolled in (or pending)
+    my_course_ids = [e.course_id for e in profile.enrollments]
+
+    # 2. Fetch courses the student is NOT in (for the "Browse" modal)
+    available_courses = Course.query.filter(Course.id.notin_(my_course_ids)).order_by(Course.title).all()
+
+    return render_template(
+        "users/courses.html",
+        enrollments=profile.enrollments,
+        available_courses=available_courses
+    )
+
+
+@users_bp.route("/courses/enroll/<int:course_id>", methods=["POST"])
+@login_required
+def enroll_request(course_id):
+    profile = current_user.student_profile
+    if not profile: return redirect(url_for("users.dashboard"))
+
+    # Check if already enrolled
+    exists = Enrollment.query.filter_by(student_id=profile.id, course_id=course_id).first()
+    if exists:
+        flash("You have already applied for or are enrolled in this course.", "warning")
+    else:
+        # Create PENDING enrollment
+        enrollment = Enrollment(
+            student_id=profile.id,
+            course_id=course_id,
+            status="pending"  # Admin must approve this
+        )
+        db.session.add(enrollment)
+        db.session.commit()
+        flash("Enrollment requested! Waiting for admin approval.", "success")
+
+    return redirect(url_for("users.my_courses"))
 
 
 @users_bp.route("/exams")

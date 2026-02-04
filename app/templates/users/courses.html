@@ -3,7 +3,12 @@
 
 {% block user_content %}
 <div class="container-fluid p-0">
-    <h2 class="h4 fw-bold mb-4">My Courses</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h4 fw-bold mb-0">My Courses</h2>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#browseCoursesModal">
+            <i class="bi bi-plus-lg"></i> Enroll New Course
+        </button>
+    </div>
 
     <div class="row g-4">
         {% for enr in enrollments %}
@@ -12,7 +17,11 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between mb-3">
                         <span class="badge bg-primary bg-opacity-10 text-primary">{{ enr.course.code }}</span>
-                        <small class="text-muted">{{ enr.course.credits }} Credits</small>
+                        {% if enr.status == 'pending' %}
+                            <span class="badge bg-warning text-dark">Pending Approval</span>
+                        {% else %}
+                            <span class="badge bg-success bg-opacity-10 text-success">Active</span>
+                        {% endif %}
                     </div>
                     <h5 class="card-title fw-bold mb-2">{{ enr.course.title }}</h5>
                     <p class="card-text text-muted small mb-3">
@@ -23,9 +32,6 @@
                         {{ enr.course.department.name if enr.course.department else 'General' }}
                     </div>
                 </div>
-                <div class="card-footer bg-white border-top-0 pt-0 pb-3">
-                    <small class="text-muted">Enrolled on: {{ enr.enrolled_on.strftime('%d %b, %Y') }}</small>
-                </div>
             </div>
         </div>
         {% else %}
@@ -35,5 +41,35 @@
         </div>
         {% endfor %}
     </div>
+</div>
+
+<div class="modal fade" id="browseCoursesModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Available Courses</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0">
+        <div class="list-group list-group-flush">
+            {% for c in available_courses %}
+            <div class="list-group-item p-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-1 fw-bold">{{ c.title }} <span class="text-muted fw-normal">({{ c.code }})</span></h6>
+                    <small class="text-muted">{{ c.department.name }} • {{ c.credits }} Credits • Fee: ${{ c.fee }}</small>
+                </div>
+                <form method="post" action="{{ url_for('users.enroll_request', course_id=c.id) }}">
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Request Enroll</button>
+                </form>
+            </div>
+            {% else %}
+            <div class="p-4 text-center text-muted">
+                You are enrolled in all available courses.
+            </div>
+            {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
