@@ -74,12 +74,9 @@
             <a class="nav-link {% if request.path == url_for('admin.dashboard') %}active{% endif %}" href="{{ url_for('admin.dashboard') }}">
                 <i class="bi bi-speedometer2"></i> Dashboard
             </a>
-          <a class="nav-link {% if request.path == url_for('admin.enrollment_pending') %}active{% endif %}" href="{{ url_for('admin.enrollment_pending') }}">
-              <i class="bi bi-clock"></i>Pending Enrollments
-              <span class="badge bg-warning text-dark ms-1 small" style="display:inline-block;">
-                {{ stats.pending_users if stats is defined and stats.pending_users > 0 else '' }}
-              </span>
-            </a>
+        <a class="nav-link" href="{{ url_for('admin.enrollment_pending') }}">
+    <i class="bi bi-check-circle"></i> Requests & Approvals
+</a>
             <a class="nav-link {% if 'apps' in request.path %}active{% endif %}" href="{{ url_for('admin.apps_page') }}">
                 <i class="bi bi-inbox"></i> Inbox
                 {% if stats and stats.new_apps > 0 %}

@@ -52,33 +52,6 @@ def dashboard():
                            recent_contacts=recent_contacts, recent_users=recent_users)
 
 
-# --------------------
-# Pending Enrollments
-# --------------------
-
-#
-#
-# @admin_bp.route("/users/<int:user_id>/approve", methods=["POST"])
-# @login_required
-# def users_approve(user_id):
-#     if not current_user.is_admin: return admin_guard()
-#     u = User.query.get_or_404(user_id)
-#     u.is_active = True
-#     db.session.commit()
-#     flash(f"User {u.email} approved.", "success")
-#     return redirect(url_for("admin.enrollment_pending"))
-#
-#
-# @admin_bp.route("/users/<int:user_id>/reject", methods=["POST"])
-# @login_required
-# def users_reject(user_id):
-#     if not current_user.is_admin: return admin_guard()
-#     u = User.query.get_or_404(user_id)
-#     db.session.delete(u)
-#     db.session.commit()
-#     flash(f"User {u.email} rejected.", "info")
-#     return redirect(url_for("admin.enrollment_pending"))
-
 
 # --------------------
 # APPLICATIONS & CONTACTS (Unified)
@@ -637,7 +610,7 @@ def application_delete(app_id):
 
 
 
-admin_bp.route("/users/pending")
+
 
 
 
@@ -707,26 +680,61 @@ def users_reject(user_id):
     return redirect(url_for("admin.enrollment_pending"))
 
 
-@admin_bp.route("/users/pending")
+# NOTE: The route URL is now /requests/pending to match the new sidebar link
+@admin_bp.route("/requests/pending")
 @login_required
 def enrollment_pending():
     if not current_user.is_admin: return admin_guard()
 
-    page = request.args.get("page", 1, type=int)
-    q = User.query.filter(User.is_active == False).order_by(User.requested_at.desc())
-    pagination = q.paginate(page=page, per_page=20, error_out=False)
+    # 1. Fetch New Account Requests (Users who are inactive)
+    pending_users = User.query.filter(User.is_active == False).order_by(User.requested_at.desc()).all()
 
-    # Fetch Courses for the enrollment dropdown
+    # 2. Fetch Course Enrollment Requests (Active users with 'pending' enrollments)
+    pending_enrollments = Enrollment.query.filter_by(status="pending").options(
+        joinedload(Enrollment.student).joinedload(StudentProfile.user),
+        joinedload(Enrollment.course)
+    ).all()
+
+    # 3. Fetch all courses (for the 'Approve New Account' dropdown)
     courses = Course.query.order_by(Course.code).all()
 
+    # DEBUG: Print to console to verify data is being fetched
+    print(f"DEBUG: Found {len(pending_enrollments)} pending enrollments.")
+
     return render_template(
-        "admin/enrollment_pending.html",
-        users=pagination.items,
-        pagination=pagination,
-        courses=courses  # Updated variable name
+        "admin/users_pending.html",
+        pending_users=pending_users,
+        pending_enrollments=pending_enrollments,
+        courses=courses
     )
 
 
+# 1. Route to APPROVE a Course Enrollment Request
+@admin_bp.route("/enrollments/<int:enrollment_id>/approve", methods=["POST"])
+@login_required
+def approve_enrollment(enrollment_id):
+    if not current_user.is_admin: return jsonify({"error": "Auth"}), 403
+
+    enr = Enrollment.query.get_or_404(enrollment_id)
+    enr.status = "active"
+    db.session.commit()
+
+    flash("Course enrollment approved.", "success")
+    return redirect(url_for("admin.enrollment_pending"))
+
+
+# 2. Route to REJECT a Course Enrollment Request
+@admin_bp.route("/enrollments/<int:enrollment_id>/reject", methods=["POST"])
+@login_required
+def reject_enrollment(enrollment_id):
+    if not current_user.is_admin: return jsonify({"error": "Auth"}), 403
+
+    enr = Enrollment.query.get_or_404(enrollment_id)
+    db.session.delete(enr)
+    db.session.commit()
+
+    flash("Enrollment request rejected.", "info")
+    return redirect(url_for("admin.enrollment_pending"))
 # --------------------------
 # EXAMS MANAGEMENT
 # --------------------------
