@@ -63,6 +63,12 @@
             <i class="bi bi-credit-card"></i> Fees
         </a>
         <div class="mt-4 px-4 text-muted small text-uppercase">Account</div>
+        <li class="nav-item">
+  <a class="nav-link {% if request.endpoint == 'users.profile' %}active{% endif %}"
+     href="{{ url_for('users.profile') }}">
+    <span class="emoji">⚙️</span> Settings & Profile
+  </a>
+</li>
         <a class="nav-link text-danger" href="{{ url_for('auth.logout') }}">
             <i class="bi bi-box-arrow-right"></i> Logout
         </a>

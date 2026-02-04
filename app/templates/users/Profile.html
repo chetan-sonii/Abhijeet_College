@@ -1,0 +1,98 @@
+{# templates/users/profile.html #}
+{% extends "users/base.html" %}
+
+{% block user_content %}
+<div class="container-fluid p-0">
+    <h2 class="h4 fw-bold mb-4">Edit Profile</h2>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <form method="POST" action="" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="me-4">
+                                <img src="{{ current_user.avatar_url }}" class="rounded-circle border" width="100" height="100" style="object-fit: cover;">
+                            </div>
+                            <div class="flex-grow-1">
+                                <label class="form-label fw-bold">Profile Picture</label>
+                                {{ form.avatar(class="form-control form-control-sm") }}
+                                {% if form.avatar.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.avatar.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <hr class="text-muted my-4">
+
+                        <h6 class="fw-bold mb-3 text-primary">Personal Information</h6>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">First Name</label>
+                                {{ form.first_name(class="form-control") }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Last Name</label>
+                                {{ form.last_name(class="form-control") }}
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Phone Number</label>
+                                {{ form.phone(class="form-control") }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Date of Birth</label>
+                                {{ form.date_of_birth(class="form-control", type="date") }}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Gender</label>
+                            {{ form.gender(class="form-select") }}
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">Address</label>
+                            {{ form.address(class="form-control", rows="3") }}
+                        </div>
+
+                        <div class="d-flex justify-content-end">
+                            {{ form.submit(class="btn btn-primary px-4") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-light">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">Account Details</h6>
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Email</small>
+                        <strong>{{ current_user.email }}</strong>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Admission Number</small>
+                        <strong>{{ current_user.student_profile.admission_no }}</strong>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Joined</small>
+                        <span>{{ current_user.created_at.strftime('%d %b, %Y') }}</span>
+                    </div>
+                    <div class="alert alert-info small mt-3 mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        To change your email or admission number, please contact the administration.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

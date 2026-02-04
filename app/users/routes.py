@@ -1,12 +1,18 @@
 # app/users/routes.py
+import os
+import secrets
+from tkinter import Image
+from PIL import Image
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_required, current_user
 
 from app.extensions import db
 from app.models import StudentProfile, Enrollment, Exam, ExamResult, Payment, Notice, Course
 from datetime import date
 from sqlalchemy import func
+
+from app.users.forms import EditProfileForm
 
 users_bp = Blueprint("users", __name__, template_folder="../../templates/users", url_prefix="/student")
 
@@ -166,3 +172,71 @@ def my_fees():
                            balance_due=balance_due,
                            credit=credit,
                            history=history)
+
+
+def save_picture(form_picture):
+    """Save profile picture with a random hex name."""
+    random_hex = secrets.token_hex(8)
+    _, f_ext = os.path.splitext(form_picture.filename)
+    picture_fn = random_hex + f_ext
+
+    # FIX: Point strictly to 'static/images/avatars'
+    folder_path = os.path.join(current_app.root_path, 'static/images/avatars')
+
+    # Create directory if it doesn't exist to prevent errors
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
+    picture_path = os.path.join(folder_path, picture_fn)
+
+    # Resize to 150x150 to save space
+    output_size = (150, 150)
+    i = Image.open(form_picture)
+    i.thumbnail(output_size)
+    i.save(picture_path)
+
+    return picture_fn
+
+
+@users_bp.route("/profile", methods=["GET", "POST"])
+@login_required
+def profile():
+    form = EditProfileForm()
+
+    if form.validate_on_submit():
+        # 1. Update User (Auth) Data
+        current_user.first_name = form.first_name.data
+        current_user.last_name = form.last_name.data
+        current_user.phone = form.phone.data
+
+        # 2. Handle Image Upload
+        if form.avatar.data:
+            try:
+                picture_file = save_picture(form.avatar.data)
+                current_user.avatar = picture_file  # Save filename to DB
+            except Exception as e:
+                flash(f"Error saving image: {str(e)}", "danger")
+                return redirect(url_for('users.profile'))
+
+        # 3. Update Student Profile Data
+        if current_user.student_profile:
+            current_user.student_profile.date_of_birth = form.date_of_birth.data
+            current_user.student_profile.gender = form.gender.data
+            current_user.student_profile.address = form.address.data
+
+        db.session.commit()
+        flash('Your profile has been updated!', 'success')
+        return redirect(url_for('users.profile'))
+
+    elif request.method == 'GET':
+        # Pre-populate form
+        form.first_name.data = current_user.first_name
+        form.last_name.data = current_user.last_name
+        form.phone.data = current_user.phone
+
+        if current_user.student_profile:
+            form.date_of_birth.data = current_user.student_profile.date_of_birth
+            form.gender.data = current_user.student_profile.gender
+            form.address.data = current_user.student_profile.address
+
+    return render_template('users/profile.html', title='Edit Profile', form=form)
