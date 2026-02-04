@@ -209,6 +209,7 @@ def apply():
     phone = request.form.get("phone", "").strip()
     program = request.form.get("program", "").strip()
     message = request.form.get("message", "").strip()
+    phone = request.form.get("phone", "").strip()
 
     # Basic validation
     if not name or not email:
@@ -232,7 +233,7 @@ def apply():
     app_row = Application(
         name=name,
         email=email,
-        phone=phone or None,
+        phone=phone,
         program_id=program_id,
         message=message or None,
         status="new",

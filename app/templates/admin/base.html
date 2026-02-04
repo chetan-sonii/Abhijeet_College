@@ -1,57 +1,127 @@
 {# templates/admin/base.html #}
 {% extends "base.html" %}
 
-{# page-specific CSS (optional) #}
 {% block page_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/dashboard.css') }}">
+<style>
+    :root {
+        --admin-sidebar-width: 260px;
+        --admin-bg: #f8f9fa;
+        --admin-sidebar-bg: #ffffff;
+        --admin-active-color: #0d6efd;
+    }
+    body { background-color: var(--admin-bg); }
+
+    /* Sidebar Styles */
+    .admin-sidebar {
+        width: var(--admin-sidebar-width);
+        background: var(--admin-sidebar-bg);
+        border-right: 1px solid rgba(0,0,0,0.05);
+        position: fixed;
+        top: 100px; bottom: 0; left: 0;
+        z-index: 100;
+        padding-top: 1rem;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.01);
+    }
+    .admin-sidebar .nav-link {
+        color: #495057;
+        padding: 0.8rem 1.5rem;
+        font-weight: 500;
+        border-radius: 0 25px 25px 0;
+        margin-right: 1rem;
+        transition: all 0.2s;
+    }
+    .admin-sidebar .nav-link:hover {
+        color: var(--admin-active-color);
+        background: rgba(13, 110, 253, 0.05);
+    }
+    .admin-sidebar .nav-link.active {
+        color: var(--admin-active-color);
+        background: rgba(13, 110, 253, 0.1);
+        font-weight: 600;
+    }
+    .admin-sidebar .nav-link i { width: 24px; text-align: center; margin-right: 8px; }
+
+    /* Main Content */
+    .admin-main {
+        margin-left: var(--admin-sidebar-width);
+        padding: 2rem;
+        min-height: 100vh;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 991.98px) {
+        .admin-sidebar { transform: translateX(-100%); transition: transform 0.3s; }
+        .admin-sidebar.show { transform: translateX(0); }
+        .admin-main { margin-left: 0; padding: 1rem; }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="admin-wrap">
-  <div class="container-fluid">
-    <div class="row">
-      <!-- Sidebar -->
-      <aside class="col-lg-2 d-none d-lg-block admin-sidebar vh-100 pt-4">
-        <div class="px-3">
-          <a class="d-block mb-4" href="{{ url_for('admin.dashboard') }}">
-            <strong>{{ config.SITE_NAME if config is defined else 'College Admin' }}</strong>
-          </a>
+<div class="admin-wrapper">
+    <button class="btn btn-primary d-lg-none m-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#adminSidebar">
+        <i class="bi bi-list"></i> Menu
+    </button>
 
-          <nav class="nav flex-column">
-            <a class="nav-link {% if request.path == url_for('admin.dashboard') %}active{% endif %}" href="{{ url_for('admin.dashboard') }}">Dashboard</a>
+    <nav class="admin-sidebar d-flex flex-column" id="adminSidebar">
+        <a class="px-4 mb-4 text-decoration-none text-dark d-flex align-items-center gap-2" href="{{ url_for('admin.dashboard') }}">
+            <i class="bi bi-shield-lock-fill text-primary fs-4"></i>
+            <span class="fs-5 fw-bold">{{ config.SITE_NAME|default('Admin Panel') }}</span>
+        </a>
 
-            <a class="nav-link {% if request.path.startswith(url_for('admin.apps_page')) %}active{% endif %}" href="{{ url_for('admin.apps_page') }}">
-              Contact & Enroll Applications
-              <span class="badge bg-info text-dark ms-1 small" id="badge-pending-apps" style="display:inline-block;">
-                {{ stats.pending_users if stats is defined and stats.pending_users is not none else '' }}
+        <div class="nav flex-column">
+            <a class="nav-link {% if request.path == url_for('admin.dashboard') %}active{% endif %}" href="{{ url_for('admin.dashboard') }}">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+          <a class="nav-link {% if request.path == url_for('admin.users_pending') %}active{% endif %}" href="{{ url_for('admin.users_pending') }}">
+              <i class="bi bi-clock"></i>Pending Users
+              <span class="badge bg-warning text-dark ms-1 small" style="display:inline-block;">
+                {{ stats.pending_users if stats is defined and stats.pending_users > 0 else '' }}
               </span>
             </a>
+            <a class="nav-link {% if 'apps' in request.path %}active{% endif %}" href="{{ url_for('admin.apps_page') }}">
+                <i class="bi bi-inbox"></i> Inbox
+                {% if stats and stats.new_apps > 0 %}
+                <span class="badge bg-danger rounded-pill ms-auto">{{ stats.new_apps }}</span>
+                {% endif %}
+            </a>
+            <a class="nav-link {% if 'students' in request.path %}active{% endif %}" href="{{ url_for('admin.students_page') }}">
+                <i class="bi bi-people"></i> Students
+            </a>
+            <a class="nav-link {% if 'courses' in request.path %}active{% endif %}" href="{{ url_for('admin.courses_page') }}">
+                <i class="bi bi-book"></i> Courses
+            </a>
+            <a class="nav-link {% if 'exams' in request.path %}active{% endif %}" href="{{ url_for('admin.exams_page') }}">
+                <i class="bi bi-pencil-square"></i> Exams
+            </a>
+            <a class="nav-link {% if 'notices' in request.path %}active{% endif %}" href="{{ url_for('admin.notices_page') }}">
+                <i class="bi bi-megaphone"></i> Notices
+            </a>
 
-            <a class="nav-link {% if request.path.startswith(url_for('admin.courses_page')) %}active{% endif %}" href="{{ url_for('admin.courses_page') }}">Courses Details</a>
+            <hr class="my-3 mx-3 text-muted">
 
-            <a class="nav-link {% if request.path.startswith(url_for('admin.notices_page')) %}active{% endif %}" href="{{ url_for('admin.notices_page') }}">Notices</a>
-            <a class="nav-link {% if request.path.startswith(url_for('admin.exams_page')) %}active{% endif %}" href="{{ url_for('admin.exams_page') }}">Exams</a>
-
-            <a class="nav-link {% if request.path.startswith(url_for('admin.students_page')) %}active{% endif %}" href="{{ url_for('admin.students_page') }}">Students</a>
-
-
-
-            <hr>
-
-            <a class="nav-link mt-2" href="{{ url_for('auth.logout') }}">Logout</a>
-          </nav>
+            <a class="nav-link text-danger" href="{{ url_for('auth.logout') }}">
+                <i class="bi bi-box-arrow-right"></i> Logout
+            </a>
         </div>
-      </aside>
+    </nav>
 
-      <!-- Main content -->
-      <main class="col-lg-10 admin-main py-4">
+    <main class="admin-main">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-4">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
         {% block admin_content %}{% endblock %}
-      </main>
-    </div>
-  </div>
+    </main>
 </div>
-{% endblock %}
-
-{% block page_js %}
-{# placeholder for admin page JS; child templates should add their scripts #}
 {% endblock %}

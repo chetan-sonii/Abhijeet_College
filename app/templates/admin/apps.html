@@ -4,42 +4,66 @@
 {% block admin_content %}
 <div class="container-fluid">
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Applications & Contacts</h2>
+    <h2>Applications & Inbox</h2>
     <div class="d-flex gap-2 align-items-center">
-      <input id="apps-search" class="form-control form-control-sm" placeholder="Search by name, email, message" style="width:320px;">
-      <button id="apps-refresh" class="btn btn-sm btn-outline-secondary">Refresh</button>
+      <input id="apps-search" class="form-control form-control-sm" placeholder="Search by name or email..." style="width:250px;">
+      <button id="apps-refresh" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-clockwise"></i> Refresh
+      </button>
     </div>
   </div>
 
-  <div class="card mb-3">
-    <div class="card-body p-2">
+  <div class="card shadow-sm">
+    <div class="card-body p-0">
       <div class="table-responsive">
-        <table class="table table-hover mb-0">
-          <thead>
+        <table class="table table-hover align-middle mb-0">
+          <thead class="bg-light">
             <tr>
-              <th>Type</th>
-              <th>Applicant / From</th>
-              <th>Summary</th>
-              <th>Status</th>
-              <th>Received</th>
-              <th class="text-end">Actions</th>
+              <th width="10%">Type</th>
+              <th width="15%">From</th>
+              <th width="15%">Phone</th>
+              <th width="25%">Summary</th>
+              <th width="10%">Status</th>
+              <th width="10%">Date</th>
+              <th width="5%">Action</th>
             </tr>
           </thead>
           <tbody id="apps-list-body">
             {% for it in items %}
             <tr data-item-id="{{ it.id }}">
-              <td class="text-capitalize">{{ it.type }}</td>
-              <td>{{ it.name }} <div class="small text-muted">{{ it.email }}</div></td>
-              <td class="small text-muted">{{ it.summary }}</td>
-              <td>{{ it.status }}</td>
-              <td>{{ it.created_at.strftime('%Y-%m-%d %H:%M') if it.created_at else '' }}</td>
+              <td>
+                {% if it.type == 'application' %}
+                  <span class="badge bg-primary bg-opacity-10 text-primary">Application</span>
+                {% else %}
+                  <span class="badge bg-warning bg-opacity-10 text-warning">Message</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="fw-bold text-dark">{{ it.name }}</div>
+                <div class="small text-muted">{{ it.email }}</div>
+              </td>
+              <td class="small text-secondary text-truncate" style="max-width: 300px;">
+                {{ it.phone }}
+              </td>
+              <td class="small text-secondary text-truncate" style="max-width: 300px;">
+                {{ it.summary }}
+              </td>
+              <td>
+                {% if it.status == 'new' or it.status == 'unread' %}
+                  <span class="badge bg-success">New</span>
+                {% else %}
+                  <span class="text-muted small">{{ it.status }}</span>
+                {% endif %}
+              </td>
+              <td class="small text-muted">
+                {{ it.created_at.strftime('%d %b %H:%M') if it.created_at else '-' }}
+              </td>
               <td class="text-end">
-                <button class="btn btn-sm btn-primary view-item" data-id="{{ it.id }}">View</button>
-                <button class="btn btn-sm btn-danger delete-item" data-id="{{ it.id }}">Delete</button>
+                <button class="btn btn-sm btn-outline-primary view-item" data-id="{{ it.id }}">View</button>
               </td>
             </tr>
             {% else %}
-            <tr><td colspan="6" class="text-center small text-muted">No applications or contacts</td></tr>
+            <tr><td colspan="6" class="text-center py-4 text-muted">No items found</td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -48,7 +72,6 @@
   </div>
 </div>
 
-<!-- Modal: view item -->
 <div class="modal fade" id="adminItemModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
@@ -57,17 +80,16 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body" id="adminItemModalBody">
-        <!-- populated by JS -->
-        <div class="text-center small text-muted">Loading…</div>
+        <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
       </div>
-          <div class="modal-footer">
-        <div class="me-auto">
-          <button id="modal-mark-btn" type="button" class="btn btn-outline-secondary">Mark / Toggle</button>
+      <div class="modal-footer justify-content-between">
+        <button id="modal-mark-btn" type="button" class="btn btn-outline-secondary">Mark Read/Accepted</button>
+        <div>
+          <button type="button" class="btn btn-outline-danger me-2" id="modal-delete-btn">Delete</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         </div>
-        <button type="button" class="btn btn-danger" id="modal-delete-btn">Delete</button>
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
       </div>
-
+    </div>
   </div>
 </div>
 {% endblock %}

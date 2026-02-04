@@ -2,144 +2,154 @@
 {% extends "admin/base.html" %}
 
 {% block admin_content %}
-<div class="container-fluid">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Dashboard</h2>
-    <div>
-      <button id="refresh-dashboard" class="btn btn-outline-secondary btn-sm">Refresh</button>
-    </div>
-  </div>
-
-  <!-- Stats cards -->
-  <div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-      <div class="admin-card p-3">
-        <div class="admin-card-title">Applications</div>
-        <div class="admin-card-value" id="stat-total-apps">{{ stats.total_apps }}</div>
-        <div class="admin-card-sub">New: <span id="stat-new-apps">{{ stats.new_apps }}</span></div>
-      </div>
-    </div>
-
-    <div class="col-6 col-md-3">
-      <div class="admin-card p-3">
-        <div class="admin-card-title">Contact Messages</div>
-        <div class="admin-card-value" id="stat-total-contacts">{{ stats.total_contacts }}</div>
-        <div class="admin-card-sub">Unread: <span id="stat-unread-contacts">{{ stats.unread_contacts }}</span></div>
-      </div>
-    </div>
-
-    <div class="col-6 col-md-3">
-      <div class="admin-card p-3">
-        <div class="admin-card-title">Pending Users</div>
-        <div class="admin-card-value" id="stat-pending-users">{{ stats.pending_users }}</div>
-        <div class="admin-card-sub">Total users: <span id="stat-total-users">{{ stats.total_users }}</span></div>
-      </div>
-    </div>
-
-    <div class="col-6 col-md-3">
-      <div class="admin-card p-3">
-        <div class="admin-card-title">Academic</div>
-        <div class="admin-card-value" id="stat-courses">{{ stats.courses }}</div>
-        <div class="admin-card-sub">Students: <span id="stat-students">{{ stats.students }}</span> · Faculty: <span id="stat-faculty">{{ stats.faculty }}</span></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Recent lists -->
-  <div class="row g-4">
-    <div class="col-lg-6">
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <strong>Recent Applications</strong>
-          <a href="{{ url_for('admin.applications_list') }}" class="small">See all</a>
+<div class="container-fluid p-0">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="h3 fw-bold mb-1">Overview</h2>
+            <p class="text-muted small">Welcome back, {{ current_user.first_name }}</p>
         </div>
-        <div class="card-body p-0">
-          <div id="recent-apps-table" class="table-responsive">
-            <table class="table mb-0">
-              <thead>
-                <tr><th>#</th><th>Applicant</th><th>Program</th><th>Status</th><th>Received</th></tr>
-              </thead>
-              <tbody id="recent-apps-body">
-                {% for a in recent_apps %}
-                <tr>
-                  <td>{{ a.id }}</td>
-                  <td>{{ a.name }} <div class="small text-muted">{{ a.email }}</div></td>
-                  <td>{{ a.program.title if a.program else '—' }}</td>
-                  <td>{{ a.status }}</td>
-                  <td>{{ a.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                </tr>
-                {% else %}
-                <tr><td colspan="5" class="text-center small text-muted">No applications yet</td></tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+        </a>
     </div>
 
-    <div class="col-lg-6">
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <strong>Recent Contacts</strong>
-          <a href="{{ url_for('admin.applications_list') }}" class="small">See all</a>
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="bg-primary bg-opacity-10 p-2 rounded me-3">
+                            <i class="bi bi-file-earmark-text text-primary fs-4"></i>
+                        </div>
+                        <h6 class="card-subtitle text-muted">Applications</h6>
+                    </div>
+                    <h3 class="card-title mb-1">{{ stats.total_apps }}</h3>
+                    <small class="text-success fw-bold">
+                        {{ stats.new_apps }} new
+                    </small>
+                </div>
+            </div>
         </div>
-        <div class="card-body p-0">
-          <div id="recent-contacts-table" class="table-responsive">
-            <table class="table mb-0">
-              <thead>
-                <tr><th>#</th><th>From</th><th>Subject</th><th>Read</th><th>Received</th></tr>
-              </thead>
-              <tbody id="recent-contacts-body">
-                {% for c in recent_contacts %}
-                <tr>
-                  <td>{{ c.id }}</td>
-                  <td>{{ c.name }} <div class="small text-muted">{{ c.email }}</div></td>
-                  <td>{{ c.subject or '—' }}</td>
-                  <td>{{ 'Yes' if c.is_read else 'No' }}</td>
-                  <td>{{ c.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                </tr>
-                {% else %}
-                <tr><td colspan="5" class="text-center small text-muted">No contacts yet</td></tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
 
-      <!-- Pending users card -->
-      <div class="card mt-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <strong>Recent Pending Users</strong>
-          <a href="{{ url_for('admin.users_pending') }}" class="small">See all</a>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="bg-success bg-opacity-10 p-2 rounded me-3">
+                            <i class="bi bi-people text-success fs-4"></i>
+                        </div>
+                        <h6 class="card-subtitle text-muted">Students</h6>
+                    </div>
+                    <h3 class="card-title mb-1">{{ stats.students }}</h3>
+                    <small class="text-muted">{{ stats.total_users }} Total Users</small>
+                </div>
+            </div>
         </div>
-        <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table mb-0">
-              <thead><tr><th>#</th><th>Username</th><th>Email</th><th>Requested</th></tr></thead>
-              <tbody id="recent-users-body">
-                {% for u in recent_users %}
-                <tr>
-                  <td>{{ u.id }}</td>
-                  <td>{{ u.username or '—' }}</td>
-                  <td>{{ u.email }}</td>
-                  <td>{{ u.requested_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                </tr>
-                {% else %}
-                <tr><td colspan="4" class="text-center small text-muted">No pending users</td></tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
 
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="bg-warning bg-opacity-10 p-2 rounded me-3">
+                            <i class="bi bi-book text-warning fs-4"></i>
+                        </div>
+                        <h6 class="card-subtitle text-muted">Academic</h6>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <div><span class="h5">{{ stats.courses }}</span> <small class="text-muted">Courses</small></div>
+                        <div><span class="h5">{{ stats.faculty }}</span> <small class="text-muted">Faculty</small></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100 {{ 'border-danger' if stats.pending_users > 0 else '' }}">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="bg-danger bg-opacity-10 p-2 rounded me-3">
+                            <i class="bi bi-person-exclamation text-danger fs-4"></i>
+                        </div>
+                        <h6 class="card-subtitle text-muted">Approvals</h6>
+                    </div>
+                    <h3 class="card-title mb-1">{{ stats.pending_users }}</h3>
+                    <a href="{{ url_for('admin.users_pending') }}" class="text-decoration-none small stretched-link">View Pending &rarr;</a>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold">Recent Applications</h6>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Name</th>
+                                <th>Program</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for app in recent_apps %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold text-dark">{{ app.name }}</div>
+                                    <div class="small text-muted">{{ app.email }}</div>
+                                </td>
+                                <td>{{ app.program.title if app.program else '-' }}</td>
+                                <td class="small">{{ app.created_at.strftime('%d %b') }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if app.status == 'accepted' else 'secondary' }}">
+                                        {{ app.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center py-3">No recent applications</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold">New Messages</h6>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>From</th>
+                                <th>Subject</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in recent_contacts %}
+                            <tr class="{{ 'fw-bold' if not c.is_read else '' }}">
+                                <td>
+                                    <div>{{ c.name }}</div>
+                                </td>
+                                <td>{{ c.subject or '(No Subject)' }}</td>
+                                <td class="small">{{ c.created_at.strftime('%d %b') }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="3" class="text-center py-3">No new messages</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-{% endblock %}
-
-{% block page_js %}
-<script src="{{ url_for('static', filename='js/admin/dashboard.js') }}"></script>
 {% endblock %}

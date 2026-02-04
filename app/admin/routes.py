@@ -13,8 +13,8 @@ from sqlalchemy.orm import joinedload
 
 admin_bp = Blueprint("admin", __name__, template_folder="../../templates/admin", url_prefix="/admin")
 
+
 def admin_guard():
-    """Single admin guard helper — returns a redirect if current_user isn't admin."""
     if not (current_user and getattr(current_user, "is_admin", False)):
         flash("Administrator access required.", "warning")
         return redirect(url_for("auth.login"))
@@ -24,286 +24,184 @@ def admin_guard():
 @admin_bp.route("/dashboard")
 @login_required
 def dashboard():
-    if not current_user.is_admin:
-        return admin_guard()
-
+    if not current_user.is_admin: return admin_guard()
     try:
         stats = {
             "total_apps": db.session.query(func.count(Application.id)).scalar() or 0,
             "new_apps": db.session.query(func.count(Application.id)).filter(Application.status == "new").scalar() or 0,
             "total_contacts": db.session.query(func.count(ContactMessage.id)).scalar() or 0,
-            "unread_contacts": db.session.query(func.count(ContactMessage.id)).filter(ContactMessage.is_read == False).scalar() or 0,
-            "pending_users": db.session.query(func.count(User.id)).filter(User.is_active == False, User.is_admin == False).scalar() or 0,
+            "unread_contacts": db.session.query(func.count(ContactMessage.id)).filter(
+                ContactMessage.is_read == False).scalar() or 0,
+            "pending_users": db.session.query(func.count(User.id)).filter(User.is_active == False,
+                                                                          User.is_admin == False).scalar() or 0,
             "total_users": db.session.query(func.count(User.id)).scalar() or 0,
             "courses": db.session.query(func.count(Course.id)).scalar() or 0,
             "students": db.session.query(func.count(StudentProfile.id)).scalar() or 0,
             "faculty": db.session.query(func.count(FacultyProfile.id)).scalar() or 0,
         }
     except Exception:
-        current_app.logger.exception("dashboard stats error")
-        stats = {k: 0 for k in ["total_apps","new_apps","total_contacts","unread_contacts","pending_users","total_users","courses","students","faculty"]}
+        stats = {k: 0 for k in
+                 ["total_apps", "new_apps", "total_contacts", "unread_contacts", "pending_users", "total_users",
+                  "courses", "students", "faculty"]}
 
     recent_apps = Application.query.order_by(Application.created_at.desc()).limit(6).all()
     recent_contacts = ContactMessage.query.order_by(ContactMessage.created_at.desc()).limit(6).all()
-    recent_users = User.query.filter(User.is_active == False, User.is_admin == False).order_by(User.requested_at.desc()).limit(6).all()
+    recent_users = User.query.filter(User.is_active == False, User.is_admin == False).order_by(
+        User.requested_at.desc()).limit(6).all()
 
-    return render_template(
-        "admin/dashboard.html",
-        stats=stats,
-        recent_apps=recent_apps,
-        recent_contacts=recent_contacts,
-        recent_users=recent_users
-    )
-
-
-# JSON endpoints used by admin JS -------------------------------------------------
-
-@admin_bp.route("/api/stats")
-@login_required
-def api_stats():
-    if not current_user.is_admin:
-        return jsonify({"status":"error","message":"admin_required"}), 403
-    try:
-        data = {
-            "total_apps": db.session.query(func.count(Application.id)).scalar() or 0,
-            "new_apps": db.session.query(func.count(Application.id)).filter(Application.status == "new").scalar() or 0,
-            "total_contacts": db.session.query(func.count(ContactMessage.id)).scalar() or 0,
-            "unread_contacts": db.session.query(func.count(ContactMessage.id)).filter(ContactMessage.is_read == False).scalar() or 0,
-            "pending_users": db.session.query(func.count(User.id)).filter(User.is_active == False, User.is_admin == False).scalar() or 0,
-            "total_users": db.session.query(func.count(User.id)).scalar() or 0,
-            "courses": db.session.query(func.count(Course.id)).scalar() or 0,
-            "students": db.session.query(func.count(StudentProfile.id)).scalar() or 0,
-            "faculty": db.session.query(func.count(FacultyProfile.id)).scalar() or 0,
-        }
-        return jsonify({"status":"ok", "stats": data})
-    except Exception:
-        current_app.logger.exception("api_stats failed")
-        return jsonify({"status":"error","message":"server_error"}), 500
-
-
-@admin_bp.route("/api/recent_applications")
-@login_required
-def api_recent_applications():
-    if not current_user.is_admin:
-        return jsonify({"status":"error","message":"admin_required"}), 403
-    try:
-        limit = int(request.args.get("limit", 6))
-        rows = Application.query.order_by(Application.created_at.desc()).limit(limit).all()
-        apps = []
-        for a in rows:
-            apps.append({
-                "id": a.id,
-                "name": a.name,
-                "email": a.email,
-                "program": a.program.title if getattr(a, "program", None) else None,
-                "status": a.status,
-                "created_at": a.created_at.isoformat() if a.created_at else None
-            })
-        return jsonify({"status":"ok","applications": apps})
-    except Exception:
-        current_app.logger.exception("api_recent_applications failed")
-        return jsonify({"status":"error","applications": []}), 500
-
-
-@admin_bp.route("/api/recent_contacts")
-@login_required
-def api_recent_contacts():
-    if not current_user.is_admin:
-        return jsonify({"status":"error","message":"admin_required"}), 403
-    try:
-        limit = int(request.args.get("limit", 6))
-        rows = ContactMessage.query.order_by(ContactMessage.created_at.desc()).limit(limit).all()
-        contacts = []
-        for c in rows:
-            contacts.append({
-                "id": c.id,
-                "name": c.name,
-                "email": c.email,
-                "subject": c.subject,
-                "is_read": bool(c.is_read),
-                "created_at": c.created_at.isoformat() if c.created_at else None
-            })
-        return jsonify({"status":"ok","contacts": contacts})
-    except Exception:
-        current_app.logger.exception("api_recent_contacts failed")
-        return jsonify({"status":"error","contacts": []}), 500
+    return render_template("admin/dashboard.html", stats=stats, recent_apps=recent_apps,
+                           recent_contacts=recent_contacts, recent_users=recent_users)
 
 
 # --------------------
-# Single Applications & Contacts page (combined)
+# PENDING USERS
+# --------------------
+
+#
+#
+# @admin_bp.route("/users/<int:user_id>/approve", methods=["POST"])
+# @login_required
+# def users_approve(user_id):
+#     if not current_user.is_admin: return admin_guard()
+#     u = User.query.get_or_404(user_id)
+#     u.is_active = True
+#     db.session.commit()
+#     flash(f"User {u.email} approved.", "success")
+#     return redirect(url_for("admin.users_pending"))
+#
+#
+# @admin_bp.route("/users/<int:user_id>/reject", methods=["POST"])
+# @login_required
+# def users_reject(user_id):
+#     if not current_user.is_admin: return admin_guard()
+#     u = User.query.get_or_404(user_id)
+#     db.session.delete(u)
+#     db.session.commit()
+#     flash(f"User {u.email} rejected.", "info")
+#     return redirect(url_for("admin.users_pending"))
+
+
+# --------------------
+# APPLICATIONS & CONTACTS (Unified)
 # --------------------
 @admin_bp.route("/apps")
 @login_required
 def apps_page():
-    if not current_user.is_admin:
-        return admin_guard()
+    if not current_user.is_admin: return admin_guard()
 
-    apps = Application.query.order_by(Application.created_at.desc()).limit(40).all()
-    contacts = ContactMessage.query.order_by(ContactMessage.created_at.desc()).limit(40).all()
+    # Combined list logic
+    apps = Application.query.order_by(Application.created_at.desc()).limit(50).all()
+    contacts = ContactMessage.query.order_by(ContactMessage.created_at.desc()).limit(50).all()
 
     combined = []
     for a in apps:
         combined.append({
-            "id": f"app-{a.id}",
-            "type": "application",
-            "pk": a.id,
-            "name": a.name,
-            "email": a.email,
-            "summary": a.short_message(140),
-            "status": a.status,
-            "created_at": a.created_at
+            "id": f"app-{a.id}", "type": "application", "pk": a.id,
+            "name": a.name, "email": a.email, "summary": a.short_message(140),
+            "status": a.status, "created_at": a.created_at,"phone": a.phone,
         })
     for c in contacts:
         combined.append({
-            "id": f"contact-{c.id}",
-            "type": "contact",
-            "pk": c.id,
-            "name": c.name,
-            "email": c.email,
-            "summary": (c.message[:140] + "…") if c.message and len(c.message) > 140 else (c.message or ""),
-            "status": ("read" if c.is_read else "new"),
-            "created_at": c.created_at
+            "id": f"contact-{c.id}", "type": "contact", "pk": c.id,
+            "name": c.name, "email": c.email,
+            "summary": (c.message[:140] + "…") if c.message else "",
+            "status": ("read" if c.is_read else "new"), "created_at": c.created_at
         })
 
-    combined = sorted(combined, key=lambda r: r["created_at"] or datetime.min, reverse=True)[:60]
-
+    combined = sorted(combined, key=lambda r: r["created_at"] or datetime.min, reverse=True)
     return render_template("admin/apps.html", items=combined)
 
 
-# API list / detail / mark / delete for apps & contacts (unchanged logic kept)
+# --- APIs for Apps.js ---
 @admin_bp.route("/api/apps")
 @login_required
 def api_apps():
-    if not current_user.is_admin:
-        return jsonify({"status":"error","message":"admin_required"}), 403
+    if not current_user.is_admin: return jsonify({"status": "error"}), 403
     q = request.args.get("q", "").strip()
-    limit = int(request.args.get("limit", 80))
+    limit = 80
 
     apps_q = Application.query
-    if q:
-        apps_q = apps_q.filter(or_(Application.name.ilike(f"%{q}%"), Application.email.ilike(f"%{q}%"), Application.message.ilike(f"%{q}%")))
-    apps = apps_q.order_by(Application.created_at.desc()).limit(limit).all()
-
     contacts_q = ContactMessage.query
+
     if q:
-        contacts_q = contacts_q.filter(or_(ContactMessage.name.ilike(f"%{q}%"), ContactMessage.email.ilike(f"%{q}%"), ContactMessage.message.ilike(f"%{q}%")))
+        term = f"%{q}%"
+        apps_q = apps_q.filter(or_(Application.name.ilike(term), Application.email.ilike(term)))
+        contacts_q = contacts_q.filter(or_(ContactMessage.name.ilike(term), ContactMessage.email.ilike(term)))
+
+    apps = apps_q.order_by(Application.created_at.desc()).limit(limit).all()
     contacts = contacts_q.order_by(ContactMessage.created_at.desc()).limit(limit).all()
 
     out = []
     for a in apps:
-        out.append({
-            "id": f"app-{a.id}",
-            "type": "application",
-            "pk": a.id,
-            "name": a.name,
-            "email": a.email,
-            "summary": (a.message or "")[:200],
-            "status": a.status,
-            "created_at": a.created_at.isoformat() if a.created_at else None
-        })
+        out.append(
+            {"id": f"app-{a.id}", "type": "application", "name": a.name, "email": a.email, "summary": a.short_message(),
+             "status": a.status, "created_at": a.created_at.isoformat()})
     for c in contacts:
-        out.append({
-            "id": f"contact-{c.id}",
-            "type": "contact",
-            "pk": c.id,
-            "name": c.name,
-            "email": c.email,
-            "summary": (c.message or "")[:200],
-            "status": "read" if c.is_read else "new",
-            "created_at": c.created_at.isoformat() if c.created_at else None
-        })
-    out_sorted = sorted(out, key=lambda r: r["created_at"] or "", reverse=True)
-    return jsonify({"status":"ok","items": out_sorted[:limit]})
+        out.append(
+            {"id": f"contact-{c.id}", "type": "contact", "name": c.name, "email": c.email, "summary": c.message[:100],
+             "status": "read" if c.is_read else "new", "created_at": c.created_at.isoformat()})
+
+    return jsonify({"status": "ok", "items": sorted(out, key=lambda x: x['created_at'], reverse=True)})
 
 
 @admin_bp.route("/api/apps/<string:item_id>")
 @login_required
 def api_get_app(item_id):
-    if not current_user.is_admin:
-        return jsonify({"status":"error","message":"admin_required"}), 403
+    if not current_user.is_admin: return jsonify({"status": "error"}), 403
 
     if item_id.startswith("app-"):
-        pk = int(item_id.split("-",1)[1])
-        a = Application.query.get(pk)
-        if not a:
-            return jsonify({"status":"error","message":"not_found"}), 404
+        a = Application.query.get(int(item_id.split("-")[1]))
+        if not a: return jsonify({"status": "error"}), 404
         return jsonify({
-            "status":"ok",
-            "type":"application",
-            "data":{
-                "id": a.id, "name": a.name, "email": a.email, "phone": a.phone,
-                "program_id": a.program_id, "program": a.program.title if getattr(a, "program", None) else None,
-                "message": a.message, "status": a.status, "created_at": a.created_at.isoformat() if a.created_at else None
-            }
+            "status": "ok", "type": "application",
+            "data": {"id": a.id, "name": a.name, "email": a.email, "phone": a.phone,
+                     "program": a.program.title if a.program else "-", "message": a.message, "status": a.status,
+                     "created_at": a.created_at.isoformat()}
         })
     elif item_id.startswith("contact-"):
-        pk = int(item_id.split("-",1)[1])
-        c = ContactMessage.query.get(pk)
-        if not c:
-            return jsonify({"status":"error","message":"not_found"}), 404
+        c = ContactMessage.query.get(int(item_id.split("-")[1]))
+        if not c: return jsonify({"status": "error"}), 404
         return jsonify({
-            "status":"ok",
-            "type":"contact",
-            "data":{
-                "id": c.id, "name": c.name, "email": c.email, "phone": getattr(c, "phone", None),
-                "subject": c.subject, "message": c.message, "is_read": bool(c.is_read),
-                "created_at": c.created_at.isoformat() if c.created_at else None
-            }
+            "status": "ok", "type": "contact",
+            "data": {"id": c.id, "name": c.name, "email": c.email, "subject": c.subject, "message": c.message,
+                     "is_read": c.is_read, "created_at": c.created_at.isoformat()}
         })
-    else:
-        return jsonify({"status":"error","message":"invalid_id"}), 400
+    return jsonify({"status": "error"}), 400
 
 
 @admin_bp.route("/api/apps/<string:item_id>/mark", methods=["POST"])
 @login_required
 def api_mark_app(item_id):
-    if not current_user.is_admin:
-        return jsonify({"status":"error","message":"admin_required"}), 403
+    if not current_user.is_admin: return jsonify({"status": "error"}), 403
 
-    payload = request.get_json() or {}
     if item_id.startswith("app-"):
-        pk = int(item_id.split("-",1)[1])
-        a = Application.query.get_or_404(pk)
-        new_status = payload.get("status")
-        if new_status:
-            a.status = new_status
-            db.session.add(a)
-            db.session.commit()
-            return jsonify({"status":"ok","id": a.id, "new_status": a.status})
-        return jsonify({"status":"error","message":"no_status"}), 400
-    elif item_id.startswith("contact-"):
-        pk = int(item_id.split("-",1)[1])
-        c = ContactMessage.query.get_or_404(pk)
-        set_read = payload.get("is_read")
-        if set_read is None:
-            c.is_read = not bool(c.is_read)
-        else:
-            c.is_read = bool(set_read)
-        db.session.add(c)
+        a = Application.query.get(int(item_id.split("-")[1]))
+        a.status = "accepted" if a.status == "new" else "new"
+
         db.session.commit()
-        return jsonify({"status":"ok","id": c.id, "is_read": bool(c.is_read)})
-    return jsonify({"status":"error","message":"invalid_id"}), 400
+        return jsonify({"status": "ok", "new_status": a.status})
+    elif item_id.startswith("contact-"):
+        c = ContactMessage.query.get(int(item_id.split("-")[1]))
+        c.is_read = not c.is_read
+        db.session.commit()
+        return jsonify({"status": "ok", "is_read": c.is_read})
+    return jsonify({"status": "error"}), 400
 
 
 @admin_bp.route("/api/apps/<string:item_id>/delete", methods=["POST"])
 @login_required
 def api_delete_app(item_id):
-    if not current_user.is_admin:
-        return jsonify({"status":"error","message":"admin_required"}), 403
-    if item_id.startswith("app-"):
-        pk = int(item_id.split("-",1)[1])
-        a = Application.query.get_or_404(pk)
-        db.session.delete(a)
-        db.session.commit()
-        return jsonify({"status":"ok","deleted": True})
-    elif item_id.startswith("contact-"):
-        pk = int(item_id.split("-",1)[1])
-        c = ContactMessage.query.get_or_404(pk)
-        db.session.delete(c)
-        db.session.commit()
-        return jsonify({"status":"ok","deleted": True})
-    return jsonify({"status":"error","message":"invalid_id"}), 400
+    if not current_user.is_admin: return jsonify({"status": "error"}), 403
 
+    if item_id.startswith("app-"):
+        db.session.delete(Application.query.get(int(item_id.split("-")[1])))
+    elif item_id.startswith("contact-"):
+        db.session.delete(ContactMessage.query.get(int(item_id.split("-")[1])))
+    db.session.commit()
+    return jsonify({"status": "ok"})
+
+
+# ... Include the rest of your Exam, Student, Notice routes here ...
 
 # --------------------
 # Courses management (list + create/edit via modal)
@@ -563,33 +461,111 @@ def application_delete(app_id):
     return redirect(url_for("admin.apps_page"))
 
 
-# --------------------
-# Pending users (unchanged)
-# --------------------
+# app/admin/routes.py (Partial Update)
+
+from app.models import (
+    # ... existing imports ...
+    Semester
+)
+
+
+# ... existing routes ...
+
 @admin_bp.route("/users/pending")
 @login_required
 def users_pending():
-    if not current_user.is_admin:
-        return admin_guard()
+    if not current_user.is_admin: return admin_guard()
+
     page = request.args.get("page", 1, type=int)
-    q = User.query.filter(User.is_active == False, User.is_admin == False).order_by(User.requested_at.desc())
+
+    # Fetch Pending Users
+    q = User.query.filter(User.is_active == False).order_by(User.requested_at.desc())
     pagination = q.paginate(page=page, per_page=20, error_out=False)
-    users = pagination.items
-    return render_template("admin/users_pending.html", users=users, pagination=pagination)
+
+    # Fetch Active Sections for the Dropdown
+    # We only show sections from active semesters to keep the list clean
+    active_semesters = Semester.query.filter_by(is_active=True).with_entities(Semester.id).all()
+    active_sem_ids = [s[0] for s in active_semesters]
+
+    if active_sem_ids:
+        sections = Section.query.filter(Section.semester_id.in_(active_sem_ids)) \
+            .options(joinedload(Section.course)) \
+            .order_by(Section.code).all()
+    else:
+        # Fallback if no active semester defined
+        sections = Section.query.options(joinedload(Section.course)).limit(50).all()
+
+    return render_template(
+        "admin/users_pending.html",
+        users=pagination.items,
+        pagination=pagination,
+        sections=sections
+    )
 
 
 @admin_bp.route("/users/<int:user_id>/approve", methods=["POST"])
 @login_required
 def users_approve(user_id):
-    if not current_user.is_admin:
-        return admin_guard()
-    u = User.query.get_or_404(user_id)
-    u.is_active = True
-    db.session.add(u)
-    db.session.commit()
-    flash(f"User {u.username or u.email} approved.", "success")
-    return redirect(url_for("admin.users_pending"))
+    if not current_user.is_admin: return admin_guard()
 
+    user = User.query.get_or_404(user_id)
+    section_id = request.form.get("section_id")
+
+    try:
+        # 1. Activate User
+        user.is_active = True
+
+        # 2. Handle Enrollment if a Section is selected
+        if section_id and section_id.strip():
+            section = Section.query.get(int(section_id))
+            if section:
+                # A. Ensure Student Profile Exists
+                if not user.student_profile:
+                    # Generate a simple Admission Number: ADM + Year + UserID
+                    adm_no = f"ADM{datetime.now().year}{user.id:04d}"
+
+                    profile = StudentProfile(
+                        user_id=user.id,
+                        email=user.email,
+                        admission_no=adm_no,
+                        first_name=user.first_name,
+                        last_name=user.last_name,
+                        department_id=section.course.department_id if section.course else None
+                    )
+                    db.session.add(profile)
+                    db.session.flush()  # Get ID before enrollment
+                else:
+                    profile = user.student_profile
+
+                # B. Create Enrollment
+                # Check if already enrolled to prevent duplicates
+                existing_enrollment = Enrollment.query.filter_by(
+                    student_id=profile.id,
+                    section_id=section.id
+                ).first()
+
+                if not existing_enrollment:
+                    enrollment = Enrollment(
+                        student_id=profile.id,
+                        section_id=section.id
+                    )
+                    db.session.add(enrollment)
+                    flash(f"User approved and enrolled in {section.course.title} ({section.code})", "success")
+                else:
+                    flash("User approved (already enrolled in this section).", "info")
+            else:
+                flash("User approved, but invalid section selected.", "warning")
+        else:
+            flash(f"User {user.email} approved (no enrollment).", "success")
+
+        db.session.commit()
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Approval error: {e}")
+        flash("Error approving user.", "danger")
+
+    return redirect(url_for("admin.users_pending"))
 
 @admin_bp.route("/users/<int:user_id>/reject", methods=["POST"])
 @login_required
@@ -599,7 +575,7 @@ def users_reject(user_id):
     u = User.query.get_or_404(user_id)
     db.session.delete(u)
     db.session.commit()
-    flash(f"User {u.username or u.email} rejected and removed.", "info")
+    flash(f"User { u.email} rejected and removed.", "info")
     return redirect(url_for("admin.users_pending"))
 
 
