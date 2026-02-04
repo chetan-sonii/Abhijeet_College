@@ -27,12 +27,6 @@ class UserRole(Enum):
     ACCOUNTANT = "accountant"
     LIBRARIAN = "librarian"
 
-class AttendanceStatus(Enum):
-    PRESENT = "present"
-    ABSENT = "absent"
-    LATE = "late"
-    EXCUSED = "excused"
-
 # -------------------------
 # Core user model
 # -------------------------
@@ -185,48 +179,6 @@ class Enrollment(TimestampMixin, db.Model):
 
     __table_args__ = (db.UniqueConstraint("student_id", "section_id", name="uq_enrollment_student_section"),)
 
-# Attendance per session (could be daily or per lecture)
-class Attendance(TimestampMixin, db.Model):
-    __tablename__ = "attendance"
-    id = db.Column(db.Integer, primary_key=True)
-    enrollment_id = db.Column(db.Integer, db.ForeignKey("enrollments.id"), nullable=False, index=True)
-    date = db.Column(db.Date, nullable=False, index=True)
-    status = db.Column(db.Enum(AttendanceStatus), nullable=False, default=AttendanceStatus.PRESENT)
-    remarks = db.Column(db.String(255), nullable=True)
-
-    enrollment = db.relationship("Enrollment", backref=db.backref("attendance_records", cascade="all,delete-orphan"))
-
-    __table_args__ = (db.UniqueConstraint("enrollment_id", "date", name="uq_attendance_enrollment_date"),)
-
-# Assignments and submissions
-class Assignment(TimestampMixin, db.Model):
-    __tablename__ = "assignments"
-    id = db.Column(db.Integer, primary_key=True)
-    section_id = db.Column(db.Integer, db.ForeignKey("sections.id"), nullable=False)
-    title = db.Column(db.String(255), nullable=False)
-    description = db.Column(db.Text)
-    posted_on = db.Column(db.DateTime, default=datetime.utcnow)
-    due_date = db.Column(db.DateTime, nullable=True)
-    total_marks = db.Column(db.Integer, nullable=True)
-
-    section = db.relationship("Section", back_populates="assignments")
-    submissions = db.relationship("AssignmentSubmission", back_populates="assignment", cascade="all,delete-orphan")
-
-class AssignmentSubmission(TimestampMixin, db.Model):
-    __tablename__ = "assignment_submissions"
-    id = db.Column(db.Integer, primary_key=True)
-    assignment_id = db.Column(db.Integer, db.ForeignKey("assignments.id"), nullable=False, index=True)
-    enrollment_id = db.Column(db.Integer, db.ForeignKey("enrollments.id"), nullable=False, index=True)
-    submitted_on = db.Column(db.DateTime, default=datetime.utcnow)
-    file_path = db.Column(db.String(512), nullable=True)   # store path to uploaded file
-    marks_obtained = db.Column(db.Float, nullable=True)
-    feedback = db.Column(db.Text)
-
-    assignment = db.relationship("Assignment", back_populates="submissions")
-    enrollment = db.relationship("Enrollment")
-
-    __table_args__ = (db.UniqueConstraint("assignment_id", "enrollment_id", name="uq_assignment_enrollment"),)
-
 # Exams + results
 class Exam(TimestampMixin, db.Model):
     __tablename__ = "exams"
@@ -280,86 +232,6 @@ class Payment(TimestampMixin, db.Model):
     student = db.relationship("StudentProfile", back_populates="payments")
     fee_structure = db.relationship("FeeStructure")
 
-# -------------------------
-# Library
-# -------------------------
-class Book(TimestampMixin, db.Model):
-    __tablename__ = "books"
-    id = db.Column(db.Integer, primary_key=True)
-    isbn = db.Column(db.String(32), unique=True, index=True, nullable=True)
-    title = db.Column(db.String(255), nullable=False)
-    author = db.Column(db.String(255), nullable=True)
-    publisher = db.Column(db.String(255), nullable=True)
-    total_copies = db.Column(db.Integer, default=1)
-    available_copies = db.Column(db.Integer, default=1)
-    location = db.Column(db.String(120), nullable=True)
-
-    borrow_records = db.relationship("BorrowRecord", back_populates="book", cascade="all,delete-orphan")
-
-class BorrowRecord(TimestampMixin, db.Model):
-    __tablename__ = "borrow_records"
-    id = db.Column(db.Integer, primary_key=True)
-    book_id = db.Column(db.Integer, db.ForeignKey("books.id"), nullable=False)
-    student_id = db.Column(db.Integer, db.ForeignKey("student_profiles.id"), nullable=False)
-    borrowed_on = db.Column(db.DateTime, default=datetime.utcnow)
-    due_on = db.Column(db.DateTime)
-    returned_on = db.Column(db.DateTime, nullable=True)
-    status = db.Column(db.String(30), default="borrowed")  # borrowed / returned / lost / renewed
-
-    book = db.relationship("Book", back_populates="borrow_records")
-    student = db.relationship("StudentProfile")
-
-# -------------------------
-# Hostel / Housing
-# -------------------------
-class Hostel(TimestampMixin, db.Model):
-    __tablename__ = "hostels"
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(120), nullable=False)
-    address = db.Column(db.Text, nullable=True)
-
-    rooms = db.relationship("HostelRoom", back_populates="hostel", cascade="all,delete-orphan")
-
-class HostelRoom(TimestampMixin, db.Model):
-    __tablename__ = "hostel_rooms"
-    id = db.Column(db.Integer, primary_key=True)
-    hostel_id = db.Column(db.Integer, db.ForeignKey("hostels.id"), nullable=False)
-    room_no = db.Column(db.String(50), nullable=False)
-    capacity = db.Column(db.Integer, default=1)
-
-    hostel = db.relationship("Hostel", back_populates="rooms")
-    allocations = db.relationship("HostelAllocation", back_populates="room", cascade="all,delete-orphan")
-
-class HostelAllocation(TimestampMixin, db.Model):
-    __tablename__ = "hostel_allocations"
-    id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.Integer, db.ForeignKey("student_profiles.id"), nullable=False)
-    room_id = db.Column(db.Integer, db.ForeignKey("hostel_rooms.id"), nullable=False)
-    allocated_on = db.Column(db.DateTime, default=datetime.utcnow)
-    vacated_on = db.Column(db.DateTime, nullable=True)
-    status = db.Column(db.String(30), default="active")  # active / vacated
-
-    student = db.relationship("StudentProfile", back_populates="hostel_allocations")
-    room = db.relationship("HostelRoom", back_populates="allocations")
-
-# -------------------------
-# Transport
-# -------------------------
-class Vehicle(TimestampMixin, db.Model):
-    __tablename__ = "vehicles"
-    id = db.Column(db.Integer, primary_key=True)
-    registration_no = db.Column(db.String(64), unique=True)
-    capacity = db.Column(db.Integer)
-    driver_name = db.Column(db.String(120), nullable=True)
-    phone = db.Column(db.String(50), nullable=True)
-
-class Route(TimestampMixin, db.Model):
-    __tablename__ = "routes"
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(120), nullable=False)
-    stops = db.Column(db.Text)  # JSON or comma-separated stops
-
-
 # ... existing imports ...
 
 # 1. Add this Enum with your other Enums
@@ -369,7 +241,6 @@ class NoticeCategory(Enum):
     EVENT = "Event"
     EXAM = "Exam"
     PLACEMENT = "Placement"
-
 
 # ... (other models) ...
 
@@ -401,16 +272,6 @@ class Event(TimestampMixin, db.Model):
 
     created_by = db.relationship("User")
 
-# Simple audit/log table
-class AuditLog(TimestampMixin, db.Model):
-    __tablename__ = "audit_logs"
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
-    action = db.Column(db.String(255), nullable=False)
-    ip_address = db.Column(db.String(64), nullable=True)
-    meta = db.Column(db.Text, nullable=True)
-
-    user = db.relationship("User")
 
 class Application(db.Model):
     __tablename__ = "applications"

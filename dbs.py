@@ -19,31 +19,22 @@ from app.models import (
     UserRole,
     Department,
     Course,
-    Semester,
+
     Section,
     StudentProfile,
     FacultyProfile,
-    section_instructors,
+
     Enrollment,
-    Attendance,
-    AttendanceStatus,
-    Assignment,
-    AssignmentSubmission,
+
     Exam,
     ExamResult,
     FeeStructure,
     Payment,
-    Book,
-    BorrowRecord,
-    Hostel,
-    HostelRoom,
-    HostelAllocation,
-    Vehicle,
-    Route,
+
     Notice,
     NoticeCategory,  # <--- NEW IMPORT
     Event,
-    AuditLog,
+
 )
 
 # ---------- configuration ----------
@@ -104,16 +95,6 @@ def seed_courses(departments):
                         department=dept_map.get(dcode))
         created.append(ensure(course))
     return created
-
-def seed_semesters():
-    print("Seeding semesters...")
-    s1 = Semester.query.filter_by(name="Fall 2025").first()
-    s2 = Semester.query.filter_by(name="Spring 2026").first()
-    if not s1:
-        s1 = ensure(Semester(name="Fall 2025", start_date=date(2025, 7, 1), end_date=date(2025, 11, 30), is_active=False))
-    if not s2:
-        s2 = ensure(Semester(name="Spring 2026", start_date=date(2026, 1, 10), end_date=date(2026, 5, 30), is_active=True))
-    return [s1, s2]
 
 def seed_users(departments):
     print("Seeding users (admin, faculty, students)...")
@@ -198,41 +179,6 @@ def seed_sections_and_enrollments(courses, semesters, faculties, students):
                 enrollments.append(enr)
     return sections, enrollments
 
-def seed_attendance(enrollments):
-    print("Seeding attendance records...")
-    today = date.today()
-    # create attendance for last 6 days for each enrollment (random present/absent)
-    for enr in enrollments:
-        for days in range(1, 7):
-            adate = today - timedelta(days=days)
-            # avoid duplicate
-            if Attendance.query.filter_by(enrollment_id=enr.id, date=adate).first():
-                continue
-            status = random.choice([AttendanceStatus.PRESENT, AttendanceStatus.ABSENT, AttendanceStatus.LATE])
-            att = Attendance(enrollment=enr, date=adate, status=status)
-            ensure(att)
-
-def seed_assignments_and_submissions(sections, enrollments):
-    print("Seeding assignments and submissions...")
-    assignments = []
-    for sec in sections:
-        # create 1 assignment per section
-        a = Assignment(section=sec, title=f"{sec.code} - Homework 1", description="Solve problems 1-5",
-                       posted_on=datetime.utcnow() - timedelta(days=10), due_date=datetime.utcnow() + timedelta(days=7),
-                       total_marks=100)
-        ensure(a)
-        assignments.append(a)
-
-        # create submissions for half of enrollments in that section
-        section_enrs = Enrollment.query.filter_by(section_id=sec.id).all()
-        for enr in random.sample(section_enrs, k=max(1, len(section_enrs)//2)):
-            if AssignmentSubmission.query.filter_by(assignment_id=a.id, enrollment_id=enr.id).first():
-                continue
-            sub = AssignmentSubmission(assignment=a, enrollment=enr, submitted_on=datetime.utcnow()-timedelta(days=2),
-                                       file_path=f"uploads/assignments/{a.id}/{enr.id}.pdf", marks_obtained=random.randint(50, 95),
-                                       feedback="Good work")
-            ensure(sub)
-
 def seed_exams_and_results(sections, enrollments):
     print("Seeding exams and results...")
     for sec in sections:
@@ -285,70 +231,6 @@ def seed_fees_and_payments(students):
                          payment_method=random.choice(["card","cash"]), transaction_id=f"TXN{random.randint(100000,999999)}", status="completed")
             ensure(p2)
 
-def seed_library(students):
-    print("Seeding library books and borrow records...")
-    sample_books = [
-        {"isbn":"9780131103627","title":"The C Programming Language","author":"Kernighan & Ritchie"},
-        {"isbn":"9780132350884","title":"Clean Code","author":"Robert C. Martin"},
-        {"isbn":"9780201616224","title":"The Pragmatic Programmer","author":"Andrew Hunt"},
-        {"isbn":"9780262033848","title":"Introduction to Algorithms","author":"Cormen et al."},
-        {"isbn":"9780134093413","title":"Computer Networking","author":"Kurose & Ross"},
-    ]
-    created_books = []
-    for b in sample_books:
-        book = Book.query.filter_by(isbn=b["isbn"]).first()
-        if not book:
-            book = ensure(Book(isbn=b["isbn"], title=b["title"], author=b["author"], total_copies=3, available_copies=3))
-        created_books.append(book)
-
-    # Borrow records for some students
-    for student in random.sample(students, k=min(6, len(students))):
-        sp = student.student_profile
-        if not sp:
-            continue
-        book = random.choice(created_books)
-        br = BorrowRecord(book=book, student=sp, borrowed_on=datetime.utcnow() - timedelta(days=random.randint(1,15)),
-                          due_on=datetime.utcnow() + timedelta(days=14), status="borrowed")
-        ensure(br)
-        # decrement available copies (simple)
-        if book.available_copies and book.available_copies > 0:
-            book.available_copies = max(0, book.available_copies - 1)
-            db.session.add(book)
-
-def seed_hostel_allocations(students):
-    print("Seeding hostels and room allocations...")
-    h = Hostel.query.filter_by(name="Main Hostel").first()
-    if not h:
-        h = ensure(Hostel(name="Main Hostel", address="On-campus"))
-    # create rooms
-    rooms = []
-    for num in range(1, 6):
-        rn = f"{100+num}"
-        r = HostelRoom.query.filter_by(hostel_id=h.id, room_no=rn).first()
-        if not r:
-            r = ensure(HostelRoom(hostel=h, room_no=rn, capacity=2))
-        rooms.append(r)
-
-    # allocate a few students
-    for student in random.sample(students, k=min(4, len(students))):
-        sp = student.student_profile
-        if not sp:
-            continue
-        # skip if already allocated
-        if HostelAllocation.query.filter_by(student_id=sp.id).first():
-            continue
-        room = random.choice(rooms)
-        alloc = HostelAllocation(student=sp, room=room, allocated_on=datetime.utcnow() - timedelta(days=random.randint(1,100)), status="active")
-        ensure(alloc)
-
-def seed_transport():
-    print("Seeding vehicles and routes...")
-    v1 = Vehicle.query.filter_by(registration_no="MH01AB0001").first()
-    if not v1:
-        v1 = ensure(Vehicle(registration_no="MH01AB0001", capacity=20, driver_name="Ramesh Kumar", phone="9999999999"))
-    route = Route.query.filter_by(name="North Campus Route").first()
-    if not route:
-        route = ensure(Route(name="North Campus Route", stops="Stop A,Stop B,Stop C"))
 
 def seed_notices_events(admin_user):
     print("Seeding notices and events with categories...")
@@ -434,11 +316,6 @@ def seed_notices_events(admin_user):
             )
             ensure(e)
 
-def seed_audit_logs(admin_user):
-    print("Seeding audit logs...")
-    if not AuditLog.query.first():
-        al = AuditLog(user=admin_user, action="seed:initial", ip_address="127.0.0.1", meta="seed script run")
-        ensure(al)
 
 # ---------- orchestrator ----------
 def seed_all(force=False):
@@ -456,20 +333,17 @@ def seed_all(force=False):
 
         departments = seed_departments()
         courses = seed_courses(departments)
-        semesters = seed_semesters()
+
         admin_user, faculties, students = seed_users(departments)
-        sections, enrollments = seed_sections_and_enrollments(courses, semesters, faculties, students)
+
         db.session.commit()  # commit so that subsequent relationships have ids
 
-        seed_attendance(enrollments)
-        seed_assignments_and_submissions(sections, enrollments)
-        seed_exams_and_results(sections, enrollments)
+
+
         seed_fees_and_payments(students)
-        seed_library(students)
-        seed_hostel_allocations(students)
-        seed_transport()
+
         seed_notices_events(admin_user)
-        seed_audit_logs(admin_user)
+
 
         # final commit
         db.session.commit()
