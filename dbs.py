@@ -1,20 +1,28 @@
 # dbs.py
 import os
 import random
-from datetime import datetime, date, timedelta
+from datetime import datetime, timedelta, date
+from faker import Faker
 from dotenv import load_dotenv
 
-# Load env variables first
+# Load environment variables
 load_dotenv()
 
 from app import create_app
 from app.extensions import db
 from app.models import (
-    User, UserRole, Department, Course, StudentProfile, Enrollment,
-    Notice, NoticeCategory, Application, Exam, ExamResult, Payment
+    User, UserRole, Department, Course, StudentProfile,
+    Enrollment, Exam, ExamResult, Payment, Notice,
+    NoticeCategory, Application
 )
 
+fake = Faker('en_IN')
 app = create_app()
+
+# Settings
+NUM_STUDENTS = 60
+NUM_NOTICES = 10
+NUM_APPLICATIONS = 8
 
 
 def seed_data():
@@ -24,185 +32,228 @@ def seed_data():
         db.create_all()
         print("✅ Database Reset.")
 
-        # ------------------------------------------------
-        # 1. Create Departments & Courses
-        # ------------------------------------------------
+        # ---------------------------------------------------------
+        # 1. DEPARTMENTS & COURSES
+        # ---------------------------------------------------------
         print("🏛️  Creating Departments & Courses...")
 
-        depts_data = [
-            ("CSE", "Computer Science", "Software, AI, and Systems"),
-            ("BBA", "Business Admin", "Management, Finance, and Marketing"),
-            ("ME", "Mechanical Eng", "Robotics and Mechanics"),
+        dept_data = [
+            ("CSE", "Computer Science", "Software Engineering & AI"),
+            ("ECE", "Electronics & Comm", "Circuits, IoT & Embedded Systems"),
+            ("ME", "Mechanical Engg", "Robotics & Automation"),
+            ("BBA", "Business Admin", "Finance, Marketing & HR"),
         ]
 
-        departments = {}
-        for code, name, desc in depts_data:
-            d = Department(code=code, name=name, description=desc)
-            db.session.add(d)
-            departments[code] = d
+        departments = []
+        courses = []
 
-        db.session.commit()  # Commit to get IDs
+        for code, name, desc in dept_data:
+            dept = Department(code=code, name=name, description=desc)
+            db.session.add(dept)
+            departments.append(dept)
+            db.session.flush()  # Get ID
 
-        courses_data = [
-            # CSE
-            ("CS101", "Intro to Python", 4, 150.00, "CSE"),
-            ("CS201", "Data Structures", 4, 150.00, "CSE"),
-            ("CS305", "Web Development", 3, 120.00, "CSE"),
-            # BBA
-            ("MKT101", "Digital Marketing", 3, 100.00, "BBA"),
-            ("FIN202", "Corporate Finance", 4, 140.00, "BBA"),
-            # ME
-            ("ME101", "Thermodynamics", 4, 160.00, "ME"),
-        ]
-
-        all_courses = []
-        for code, title, credits, fee, dept_code in courses_data:
-            c = Course(
-                code=code,
-                title=title,
-                credits=credits,
-                fee=fee,
-                department_id=departments[dept_code].id,
-                description=f"Comprehensive course on {title}."
-            )
-            db.session.add(c)
-            all_courses.append(c)
+            # Create 3 courses per department
+            for i in range(1, 4):
+                c_title = f"{name} Level {i}"
+                course = Course(
+                    code=f"{code}{100 + i}",
+                    title=c_title,
+                    credits=random.choice([3, 4]),
+                    fee=random.choice([15000.0, 20000.0, 12000.0]),
+                    department_id=dept.id,
+                    description=fake.paragraph(nb_sentences=2)
+                )
+                db.session.add(course)
+                courses.append(course)
 
         db.session.commit()
 
-        # ------------------------------------------------
-        # 2. Create Specific Admin (from .env)
-        # ------------------------------------------------
-        admin_email = os.getenv("ADMIN_EMAIL", "admin@college.edu")
-        admin_pass = os.getenv("ADMIN_PASSWORD", "admin123")
+        # ---------------------------------------------------------
+        # 2. ADMIN & DEMO STUDENT
+        # ---------------------------------------------------------
+        print("👤 Creating Admin & Demo Student...")
 
+        # Admin
         admin = User(
-            email=admin_email,
+            email=os.getenv("ADMIN_EMAIL", "admin@college.edu"),
             first_name="Super",
             last_name="Admin",
             role=UserRole.ADMIN,
             is_admin=True,
-            is_active=True
+            is_active=True,
+            phone="9999999999"
         )
-        admin.set_password(admin_pass)
+        admin.set_password(os.getenv("ADMIN_PASSWORD", "admin123"))
         db.session.add(admin)
-        print(f"👤 Admin created: {admin_email}")
 
-        # ------------------------------------------------
-        # 3. Create Specific Student (from .env)
-        # ------------------------------------------------
-        student_email = os.getenv("STUDENT_EMAIL", "student@college.edu")
-        student_pass = os.getenv("STUDENT_PASSWORD", "student123")
-
-        student_user = User(
-            email=student_email,
+        # Demo Student
+        demo_user = User(
+            email=os.getenv("STUDENT_EMAIL", "student@college.edu"),
             first_name="Rahul",
             last_name="Sharma",
-            phone="9876543210",
             role=UserRole.STUDENT,
             is_admin=False,
-            is_active=True
+            is_active=True,
+            phone="9876543210"
         )
-        student_user.set_password(student_pass)
-        db.session.add(student_user)
-        db.session.commit()  # Commit user to get ID
+        demo_user.set_password(os.getenv("STUDENT_PASSWORD", "student123"))
+        db.session.add(demo_user)
+        db.session.flush()  # Essential to get demo_user.id
 
-        # Create Profile
-        student_profile = StudentProfile(
-            user_id=student_user.id,
-            admission_no="ADM2026001",
-            date_of_birth=date(2004, 5, 15),
+        demo_profile = StudentProfile(
+            user_id=demo_user.id,
+            admission_no=f"ADM{datetime.now().year}0001",
+            date_of_birth=date(2002, 5, 20),
             gender="Male",
-            address="123, College Road, Delhi",
-            department_id=departments["CSE"].id,
-            year="2nd Year"
+            address="Raipur, Chhattisgarh",
+            department_id=departments[0].id,
+            year="3rd Year"
         )
-        db.session.add(student_profile)
-        db.session.commit()
-        print(f"🎓 Student created: {student_email}")
+        db.session.add(demo_profile)
+        db.session.flush()  # Essential to get demo_profile.id for enrollment
 
-        # ------------------------------------------------
-        # 4. Enroll Student & Add Payments
-        # ------------------------------------------------
-        # Enroll in CS101 and CS305
-        enrolled_courses = [c for c in all_courses if c.code in ["CS101", "CS305"]]
-
-        enrollments = []
-        for course in enrolled_courses:
-            enr = Enrollment(
-                student_id=student_profile.id,
-                course_id=course.id
-            )
+        # Enroll Demo Student
+        demo_courses = courses[:2]
+        for c in demo_courses:
+            # Use 'student=demo_profile' OR ensure 'student_id=demo_profile.id' is not None
+            enr = Enrollment(student_id=demo_profile.id, course_id=c.id, status='active')
             db.session.add(enr)
-            enrollments.append(enr)
 
-        # Add a dummy payment
-        payment = Payment(
-            student_id=student_profile.id,
-            amount=500.00,
-            status="completed"
-        )
-        db.session.add(payment)
+            pay = Payment(student_id=demo_profile.id, amount=5000.0, status='success')
+            db.session.add(pay)
+
+        # ---------------------------------------------------------
+        # 3. BULK STUDENTS (FIXED FLUSHING)
+        # ---------------------------------------------------------
+        print(f"👨‍🎓 Generating {NUM_STUDENTS} Students...")
+
+        for i in range(NUM_STUDENTS):
+            # 1. Create User
+            gender = random.choice(["Male", "Female"])
+            fname = fake.first_name_male() if gender == "Male" else fake.first_name_female()
+            lname = fake.last_name()
+
+            u = User(
+                email=f"{fname.lower()}.{lname.lower()}{i}@example.com",
+                first_name=fname,
+                last_name=lname,
+                phone=fake.phone_number()[:15],
+                role=UserRole.STUDENT,
+                is_active=True
+            )
+            u.set_password("password")
+            db.session.add(u)
+            db.session.flush()  # --- FIX: Flush to generate u.id ---
+
+            # 2. Create Profile
+            dept = random.choice(departments)
+            sp = StudentProfile(
+                user_id=u.id,  # Now u.id exists
+                admission_no=f"ADM{datetime.now().year}{u.id:04d}",
+                date_of_birth=fake.date_of_birth(minimum_age=18, maximum_age=24),
+                gender=gender,
+                address=fake.city(),
+                department_id=dept.id,
+                year=random.choice(["1st Year", "2nd Year", "3rd Year"])
+            )
+            db.session.add(sp)
+            db.session.flush()  # --- FIX: Flush to generate sp.id ---
+
+            # 3. Enrollments (Now sp.id exists)
+            num_c = random.randint(1, 3)
+            dept_courses = [c for c in courses if c.department_id == dept.id]
+            if not dept_courses: dept_courses = courses[:3]
+
+            my_courses = random.sample(dept_courses, min(len(dept_courses), num_c))
+
+            for c in my_courses:
+                enr = Enrollment(student_id=sp.id, course_id=c.id, status='active')
+                db.session.add(enr)
+
+                # Payments
+                if random.random() > 0.4:
+                    pay = Payment(
+                        student_id=sp.id,
+                        amount=float(c.fee),
+                        paid_on=fake.date_time_this_year(),
+                        status='success'
+                    )
+                    db.session.add(pay)
 
         db.session.commit()
 
-        # ------------------------------------------------
-        # 5. Create Exams & Results
-        # ------------------------------------------------
-        # Create an exam for CS101
-        cs101 = next(c for c in all_courses if c.code == "CS101")
-        exam = Exam(
-            course_id=cs101.id,
-            name="Mid-Term Assessment",
-            exam_date=date.today() + timedelta(days=5),
-            total_marks=50
-        )
-        db.session.add(exam)
-        db.session.commit()
+        # ---------------------------------------------------------
+        # 4. EXAMS & RESULTS
+        # ---------------------------------------------------------
+        print("📝 Scheduling Exams & Grading...")
 
-        # Give the student a result for this exam
-        result = ExamResult(
-            exam_id=exam.id,
-            enrollment_id=enrollments[0].id,  # CS101 enrollment
-            marks_obtained=42.5,
-            grade="A",
-            remarks="Excellent work"
-        )
-        db.session.add(result)
+        all_exams = []
+        for course in courses:
+            # Past Exam
+            past = Exam(
+                course_id=course.id,
+                name=f"Mid-Term: {course.code}",
+                exam_date=date.today() - timedelta(days=random.randint(10, 60)),
+                total_marks=50
+            )
+            db.session.add(past)
+            all_exams.append(past)
 
-        # ------------------------------------------------
-        # 6. Notices & Applications
-        # ------------------------------------------------
-        notices = [
-            (
-            "Welcome Class of 2026", "We are excited to start the new academic session.", NoticeCategory.GENERAL, True),
-            ("Mid-Term Dates", "Mid-term exams for CSE start next week.", NoticeCategory.EXAM, False),
-            ("Holiday Announcement", "College remains closed on Friday.", NoticeCategory.GENERAL, False),
-        ]
+            # Upcoming
+            future = Exam(
+                course_id=course.id,
+                name=f"Finals: {course.code}",
+                exam_date=date.today() + timedelta(days=random.randint(5, 30)),
+                total_marks=100
+            )
+            db.session.add(future)
 
-        for title, body, cat, pinned in notices:
+        db.session.commit()  # Commit exams to get IDs
+
+        # Results for Past Exams
+        for exam in all_exams:
+            enrollments = Enrollment.query.filter_by(course_id=exam.course_id).all()
+            for enr in enrollments:
+                if random.random() > 0.1:  # 90% students attempted
+                    obtained = random.uniform(20, exam.total_marks)
+                    res = ExamResult(
+                        exam_id=exam.id,
+                        enrollment_id=enr.id,
+                        marks_obtained=round(obtained, 1),
+                        grade="A" if obtained > 40 else "B",
+                        remarks="Good"
+                    )
+                    db.session.add(res)
+
+        # ---------------------------------------------------------
+        # 5. NOTICES & APPLICATIONS
+        # ---------------------------------------------------------
+        print("📢 Finishing touches...")
+
+        # Notices
+        for _ in range(NUM_NOTICES):
             n = Notice(
-                title=title, body=body, category=cat,
-                is_pinned=pinned, posted_by_id=admin.id
+                title=fake.sentence(),
+                body=fake.paragraph(),
+                category=random.choice(list(NoticeCategory)),
+                is_pinned=random.choice([True, False]),
+                posted_by_id=admin.id
             )
             db.session.add(n)
 
-        # Pending Applications (Fake users)
-        apps = [
-            ("Amit Verma", "amit@example.com", "CSE", "I love coding."),
-            ("Sneha Gupta", "sneha@example.com", "BBA", "Interested in management."),
-        ]
-
-        for name, email, dept_code, msg in apps:
-            prog = next(c for c in all_courses if c.department.code == dept_code)
+        # Pending Apps
+        for _ in range(NUM_APPLICATIONS):
             a = Application(
-                name=name, email=email, program_id=prog.id,
-                message=msg, status="new"
+                name=fake.name(),
+                email=fake.email(),
+                program_id=random.choice(courses).id,
+                status="new"
             )
             db.session.add(a)
 
         db.session.commit()
-        print("✨ Seeding Complete! System ready.")
+        print("✨ SEEDING COMPLETE! ✨")
 
 
 if __name__ == "__main__":
